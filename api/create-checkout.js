@@ -16,6 +16,12 @@ function authHeader() {
   return 'Basic ' + Buffer.from(process.env.PAYMONGO_SECRET_KEY + ':').toString('base64');
 }
 
+// Set PAYMONGO_TRIAL_MODE=false in your environment once you're ready to charge real amounts.
+// While this is true (the default), every checkout is capped at PayMongo's ₱1.00 minimum
+// no matter what the bill says, so you can test GCash/Maya/QR Ph/card end-to-end safely.
+const TRIAL_MODE = process.env.PAYMONGO_TRIAL_MODE !== 'false';
+const TRIAL_AMOUNT_CENTAVOS = 100; // ₱1.00
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -37,8 +43,12 @@ module.exports = async (req, res) => {
     if (bill.uid !== decoded.uid) return res.status(403).json({ error: 'Not your bill' });
     if (bill.status === 'Paid') return res.status(409).json({ error: 'Already paid' });
 
-    const amountCentavos = Math.round(Number(bill.amount) * 100);
-    if (!(amountCentavos > 0)) return res.status(400).json({ error: 'Invalid bill amount' });
+    const actualAmountCentavos = Math.round(Number(bill.amount) * 100);
+    if (!(actualAmountCentavos > 0)) return res.status(400).json({ error: 'Invalid bill amount' });
+
+    // The Firestore bill document still holds the real amount (actualAmountCentavos).
+    // Only the amount actually sent to PayMongo is swapped out while TRIAL_MODE is on.
+    const chargeAmountCentavos = TRIAL_MODE ? TRIAL_AMOUNT_CENTAVOS : actualAmountCentavos;
 
     const base = process.env.PUBLIC_BASE_URL;
 
@@ -49,11 +59,23 @@ module.exports = async (req, res) => {
         data: {
           attributes: {
             billing: { name: bill.customerName || decoded.email, email: decoded.email },
-            line_items: [{ name: `Water bill (${bill.period || billId})`, amount: amountCentavos, currency: 'PHP', quantity: 1 }],
-            payment_method_types: ['gcash', 'paymaya', 'card'],
+            line_items: [{
+              name: TRIAL_MODE
+                ? `Water bill (${bill.period || billId}) — TRIAL ₱1 charge, actual due ₱${(actualAmountCentavos / 100).toFixed(2)}`
+                : `Water bill (${bill.period || billId})`,
+              amount: chargeAmountCentavos,
+              currency: 'PHP',
+              quantity: 1,
+            }],
+            payment_method_types: ['gcash', 'paymaya', 'card', 'qrph'],
             success_url: `${base}/billing.html?pm=success&bill=${billId}`,
             cancel_url: `${base}/billing.html?pm=cancelled&bill=${billId}`,
-            metadata: { billId, uid: decoded.uid },
+            metadata: {
+              billId,
+              uid: decoded.uid,
+              trialMode: String(TRIAL_MODE),
+              actualAmountCentavos: String(actualAmountCentavos),
+            },
           },
         },
       }),
@@ -61,7 +83,10 @@ module.exports = async (req, res) => {
     const json = await resp.json();
     if (!resp.ok) return res.status(502).json({ error: json?.errors?.[0]?.detail || 'PayMongo error' });
 
-    await billRef.set({ paymongoCheckoutSessionId: json.data.id }, { merge: true });
+    await billRef.set({
+      paymongoCheckoutSessionId: json.data.id,
+      lastChargeAmountCentavos: chargeAmountCentavos,
+    }, { merge: true });
 
     res.status(200).json({ checkoutUrl: json.data.attributes.checkout_url });
   } catch (err) {
