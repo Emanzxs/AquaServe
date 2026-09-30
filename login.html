@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AquaServe – Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="assets/aquaserve-logo.png" alt="AquaServe">
+      <h2>AquaServe</h2>
+      <p>Smart Water District Management</p>
+    </div>
+    <div id="loginSection">
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="email" placeholder="you@example.com" required>
+          <span class="error" id="emailErr"></span>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+        <div class="forgot-link"><a href="#">Forgot password?</a></div>
+        <button type="submit" class="btn btn-blue btn-full" id="loginBtn">Sign In →</button>
+      </form>
+      <div class="signup-link">No account? <a href="#" onclick="toggleSection('register')">Register here</a></div>
+
+      <div class="demo-divider"><span>or try a demo account</span></div>
+      <div class="demo-grid">
+        <button type="button" class="demo-btn" onclick="demoLogin('customer',this)">
+          <span class="demo-icon">👤</span><span>Customer</span>
+        </button>
+        <button type="button" class="demo-btn" onclick="demoLogin('staff',this)">
+          <span class="demo-icon">🏢</span><span>Staff</span>
+        </button>
+        <button type="button" class="demo-btn" onclick="demoLogin('admin',this)">
+          <span class="demo-icon">🛡️</span><span>Admin</span>
+        </button>
+      </div>
+      <div class="form-info" style="margin-top:1.25rem;margin-bottom:0;font-size:.8rem;">
+        <strong>Demo credentials:</strong><br>
+        customer@aquaserve.ph / customer123<br>
+        staff@aquaserve.ph / staff123<br>
+        admin@aquaserve.ph / admin123<br>
+        <span style="color:var(--gray-500)">(These only work once you've created them in your own Firebase project — see SETUP.md → "Demo accounts".)</span>
+      </div>
+    </div>
+    <div id="registerSection" style="display:none;">
+      <form id="registerForm">
+        <div class="form-group"><label>Full Name</label><input type="text" id="regName" placeholder="Juan Dela Cruz" required></div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="regEmail" placeholder="you@example.com" required>
+          <span class="error" id="regEmailErr"></span>
+        </div>
+        <div class="form-group"><label>Password (min 6 characters)</label><input type="password" id="regPass" placeholder="••••••••" required minlength="6"></div>
+        <div class="form-info" style="margin-bottom:1.25rem;font-size:.82rem;">
+          New accounts are registered as <strong>Customer</strong>. Staff and Admin accounts are created by an administrator.
+        </div>
+        <button type="submit" class="btn btn-blue btn-full">Create Account →</button>
+      </form>
+      <div class="signup-link">Have an account? <a href="#" onclick="toggleSection('login')">Sign in</a></div>
+    </div>
+  </div>
+</div>
+<style>
+  .demo-divider{display:flex;align-items:center;gap:.75rem;margin:1.5rem 0 1rem;color:var(--gray-500);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
+  .demo-divider::before,.demo-divider::after{content:'';flex:1;height:1px;background:var(--gray-300)}
+  .demo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem}
+  .demo-btn{display:flex;flex-direction:column;align-items:center;gap:.35rem;padding:.75rem .5rem;border:1.5px solid var(--gray-300);border-radius:10px;background:var(--white);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;color:var(--gray-700);transition:all .2s}
+  .demo-btn:hover{border-color:var(--blue-bright);background:var(--blue-light);transform:translateY(-2px)}
+  .demo-btn:disabled{opacity:.6;cursor:wait;transform:none}
+  .demo-icon{font-size:1.4rem}
+</style>
+<script type="module">
+import { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+         collection, addDoc, doc, setDoc, getDoc, serverTimestamp } from './firebase-config.js';
+
+window.toggleSection=(s)=>{document.getElementById('loginSection').style.display=s==='login'?'block':'none';document.getElementById('registerSection').style.display=s==='register'?'block':'none';};
+function toast(msg,type='info'){const t=document.createElement('div');t.className=`toast ${type}`;t.innerHTML=`<span>${type==='success'?'✓':'ℹ'}</span> ${msg}`;document.body.appendChild(t);setTimeout(()=>t.remove(),3500);}
+
+// ── Pre-made demo accounts ──────────────────────────────────────
+// These must actually exist in YOUR Firebase project with these
+// exact emails/passwords, and matching role fields in Firestore
+// /users/{uid}. See SETUP.md → "Demo accounts" for the one-time
+// script that creates them. This page never assigns the role itself —
+// it only signs in; the role always comes from Firestore, same as a
+// real login, so this can't be used to fake elevated access.
+const DEMO_ACCOUNTS = {
+  customer: { email: 'customer@aquaserve.ph', password: 'customer123' },
+  staff:    { email: 'staff@aquaserve.ph',    password: 'staff123'    },
+  admin:    { email: 'admin@aquaserve.ph',    password: 'admin123'    },
+};
+
+window.demoLogin = async (role, btn) => {
+  const creds = DEMO_ACCOUNTS[role];
+  if (!creds) return;
+  document.querySelectorAll('.demo-btn').forEach(b => b.disabled = true);
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = '<span class="demo-icon">⏳</span><span>Signing in…</span>';
+  document.getElementById('emailErr').textContent = '';
+
+  try {
+    const cred = await signInWithEmailAndPassword(auth, creds.email, creds.password);
+    const snap = await getDoc(doc(db, 'users', cred.user.uid));
+    let actualRole = 'customer', name = creds.email.split('@')[0];
+    if (snap.exists()) {
+      const d = snap.data();
+      actualRole = d.role || actualRole;
+      name = d.name || name;
+    }
+    localStorage.setItem('aquaUser', JSON.stringify({ email: creds.email, role: actualRole, name, uid: cred.user.uid }));
+    toast(`Signed in as demo ${actualRole}!`, 'success');
+    setTimeout(() => {
+      if (actualRole === 'admin') window.location.href = 'admin.html';
+      else if (actualRole === 'staff') window.location.href = 'dashboard.html';
+      else window.location.href = 'index.html';
+    }, 800);
+  } catch (err) {
+    document.querySelectorAll('.demo-btn').forEach(b => b.disabled = false);
+    btn.innerHTML = originalHTML;
+    if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found') {
+      toast(`Demo ${role} account doesn't exist yet in this Firebase project. See SETUP.md.`, 'error');
+    } else {
+      toast('Demo login failed: ' + err.message, 'error');
+    }
+  }
+};
+
+document.getElementById('loginForm').addEventListener('submit',async(e)=>{
+  e.preventDefault();
+  const email=document.getElementById('email').value.trim();
+  const pass=document.getElementById('password').value;
+  const btn=document.getElementById('loginBtn');
+  document.getElementById('emailErr').textContent='';
+  btn.textContent='Signing in…';btn.disabled=true;
+  try{
+    const cred=await signInWithEmailAndPassword(auth,email,pass);
+    // Role comes ONLY from the user's own Firestore profile doc (server-controlled),
+    // never from anything typed on this page.
+    const snap=await getDoc(doc(db,'users',cred.user.uid));
+    let role='customer', name=email.split('@')[0];
+    if(snap.exists()){const d=snap.data();role=d.role||role;name=d.name||name;}
+    localStorage.setItem('aquaUser',JSON.stringify({email,role,name,uid:cred.user.uid}));
+    toast('Welcome back, '+name+'!','success');
+    setTimeout(()=>{
+      if(role==='admin') window.location.href='admin.html';
+      else if(role==='staff') window.location.href='dashboard.html';
+      else window.location.href='index.html';
+    },1000);
+  }catch(err){
+    btn.textContent='Sign In →';btn.disabled=false;
+    document.getElementById('emailErr').textContent=
+      (err.code==='auth/invalid-credential'||err.code==='auth/user-not-found')?'Invalid email or password.':
+      err.code==='auth/too-many-requests'?'Too many attempts. Try later.':err.message;
+  }
+});
+
+document.getElementById('registerForm').addEventListener('submit',async(e)=>{
+  e.preventDefault();
+  const name=document.getElementById('regName').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const pass=document.getElementById('regPass').value;
+  document.getElementById('regEmailErr').textContent='';
+  try{
+    const cred=await createUserWithEmailAndPassword(auth,email,pass);
+    // Self-signup is always 'customer' — Firestore rules also enforce this server-side.
+    await setDoc(doc(db,'users',cred.user.uid),{uid:cred.user.uid,name,email,role:'customer',createdAt:serverTimestamp()});
+    localStorage.setItem('aquaUser',JSON.stringify({email,role:'customer',name,uid:cred.user.uid}));
+    toast('Account created! Welcome.','success');
+    setTimeout(()=>{window.location.href='index.html';},1000);
+  }catch(err){
+    document.getElementById('regEmailErr').textContent=err.code==='auth/email-already-in-use'?'Email already registered.':err.message;
+  }
+});
+</script>
+</body>
+</html>

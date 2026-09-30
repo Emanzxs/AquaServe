@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report a Water Issue – AquaServe</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .rp{max-width:720px;margin:0 auto}
+    .rp-head{text-align:center;margin-bottom:1.25rem}
+    .rp-head h1{font-size:1.8rem;margin-bottom:.25rem}
+    .rp-head p{color:#64748b}
+    .rp-chip{display:inline-block;margin-top:.6rem;background:#e0f2fe;color:#075985;border-radius:999px;padding:.3rem .9rem;font-size:.82rem}
+    .rp-chip a{color:#075985;font-weight:700}
+    .rp-progress{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin:1rem 0 1.5rem}
+    .rp-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#0284c7);transition:width .3s}
+    .rp-card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:1.4rem;margin-bottom:1.1rem}
+    .rp-card h3{display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;font-size:1.05rem}
+    .rp-num{width:28px;height:28px;border-radius:50%;background:#0a4f7a;color:#fff;display:grid;place-items:center;font-size:.85rem;flex:none}
+    .rp-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.7rem}
+    .rp-tile{border:2px solid #e2e8f0;border-radius:14px;padding:.9rem .5rem;text-align:center;cursor:pointer;background:#f8fafc;transition:.15s;user-select:none}
+    .rp-tile:hover{border-color:#7dd3fc}
+    .rp-tile .e{font-size:1.9rem;display:block;margin-bottom:.2rem}
+    .rp-tile b{font-size:.88rem;display:block}
+    .rp-tile small{font-size:.7rem;color:#94a3b8}
+    .rp-tile.on{border-color:#0284c7;background:#e0f2fe;box-shadow:0 0 0 3px rgba(2,132,199,.15)}
+    .rp-err{color:#dc2626;font-size:.82rem;margin-top:.5rem;display:block}
+    .rp-f{margin-bottom:.9rem}
+    .rp-f label{display:block;font-weight:600;font-size:.88rem;margin-bottom:.3rem}
+    .rp-f input,.rp-f textarea{width:100%;padding:.8rem 1rem;border:1.5px solid #cbd5e1;border-radius:12px;font:inherit;font-size:1rem;box-sizing:border-box}
+    .rp-f input:focus,.rp-f textarea:focus{outline:none;border-color:#0284c7;box-shadow:0 0 0 3px rgba(2,132,199,.15)}
+    .rp-f textarea{min-height:110px;resize:vertical}
+    .rp-drop{display:block;border:2px dashed #cbd5e1;border-radius:14px;padding:1.2rem;text-align:center;cursor:pointer;color:#64748b}
+    .rp-drop:hover{border-color:#0284c7}
+    .rp-drop input{display:none}
+    .rp-drop img{max-width:100%;max-height:220px;border-radius:10px;display:block;margin:0 auto .5rem}
+    .rp-submit{width:100%;border:0;border-radius:14px;padding:1rem;font-size:1.05rem;font-weight:800;color:#fff;cursor:pointer;background:linear-gradient(135deg,#0a4f7a,#0e9ab8)}
+    .rp-submit:disabled{opacity:.6;cursor:wait}
+    .rp-done{text-align:center;padding:2rem 1rem}
+    .rp-done .big{font-size:3.5rem}
+    .rp-ref{display:inline-flex;align-items:center;gap:.6rem;background:#f1f5f9;border-radius:12px;padding:.7rem 1.2rem;margin:1rem 0;font-size:1.25rem;font-weight:800;letter-spacing:.04em}
+    .rp-ref button{border:0;background:#0284c7;color:#fff;border-radius:8px;padding:.35rem .7rem;font-size:.75rem;cursor:pointer}
+  </style>
+</head>
+<body>
+<header>
+  <a href="index.html" class="logo"><img src="assets/aquaserve-logo.png" alt="AquaServe"><h2>Aqua<span>Serve</span></h2></a>
+  <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <a href="about.html">🏛️ About</a>
+    <a href="contact.html">📞 Contact</a>
+    <a href="report.html">⚠️ Report Issue</a>
+    <a href="billing.html">💧 Billing</a>
+    <a href="faq.html">❓ FAQ</a>
+    <a id="dashLink" href="dashboard.html" style="display:none">📊 Dashboard</a>
+    <a id="adminLink" href="admin.html" style="display:none">🛡️ Admin</a>
+    <a href="login.html" class="btn btn-gold" style="margin-left:.5rem" id="loginNavBtn">Login</a>
+  </nav>
+</header>
+
+<div class="page-wrap">
+  <div class="rp">
+    <div class="rp-head">
+      <h1>⚠️ Report a Water Issue</h1>
+      <p>It takes about a minute. We’ll track it and keep you updated.</p>
+      <div class="rp-chip" id="whoChip" style="display:none"></div>
+    </div>
+    <div class="rp-progress"><i id="bar"></i></div>
+
+    <form id="reportForm">
+      <div class="rp-card">
+        <h3><span class="rp-num">1</span> What’s the problem?</h3>
+        <div class="rp-tiles">
+          <div class="rp-tile" data-type="Leak" data-priority="High"><span class="e">💦</span><b>Leak</b><small>Water is escaping</small></div>
+          <div class="rp-tile" data-type="No Water Supply" data-priority="High"><span class="e">🚱</span><b>No Water</b><small>Nothing from the tap</small></div>
+          <div class="rp-tile" data-type="Low Pressure" data-priority="Medium"><span class="e">📉</span><b>Low Pressure</b><small>Weak flow</small></div>
+          <div class="rp-tile" data-type="Water Quality" data-priority="High"><span class="e">🧪</span><b>Dirty Water</b><small>Color, smell, taste</small></div>
+          <div class="rp-tile" data-type="Pipe Damage" data-priority="Medium"><span class="e">🔧</span><b>Broken Pipe</b><small>Damaged or exposed</small></div>
+          <div class="rp-tile" data-type="Meter Issue" data-priority="Medium"><span class="e">📟</span><b>Meter</b><small>Faulty or stuck</small></div>
+          <div class="rp-tile" data-type="Billing Concern" data-priority="Low"><span class="e">🧾</span><b>Billing</b><small>Wrong charges</small></div>
+          <div class="rp-tile" data-type="Other" data-priority="Low"><span class="e">❓</span><b>Something Else</b><small>Anything else</small></div>
+        </div>
+        <span class="rp-err" id="typeErr"></span>
+      </div>
+
+      <div class="rp-card">
+        <h3><span class="rp-num">2</span> Where are you?</h3>
+        <div class="rp-f" id="nameGroup" style="display:none"><label>Your name</label><input type="text" id="repName" placeholder="Juan Dela Cruz" autocomplete="name"></div>
+        <div class="rp-f"><label>Service address</label><input type="text" id="repAddress" placeholder="Purok / Street, Barangay" autocomplete="street-address" required></div>
+        <div class="rp-f"><label>Mobile number</label><input type="tel" id="repPhone" placeholder="09xxxxxxxxx" inputmode="numeric" autocomplete="tel" required></div>
+        <div class="rp-f"><label>Account number <span style="font-weight:400;color:#94a3b8">(optional)</span></label><input type="text" id="repAccount" placeholder="e.g. AQ-00123"></div>
+      </div>
+
+      <div class="rp-card">
+        <h3><span class="rp-num">3</span> Describe the situation</h3>
+        <div class="rp-f"><label>Description</label><textarea id="repDesc" placeholder="Describe the issue in detail…" required></textarea></div>
+        <label class="rp-drop" id="drop">
+          <input type="file" id="repPhoto" accept="image/*">
+          <div id="dropInner">📷 <strong>Add a photo</strong> (optional, max 10MB)<br><small>Tap to take or choose a picture</small></div>
+        </label>
+      </div>
+
+      <button type="submit" class="rp-submit" id="submitBtn">Submit Report →</button>
+      <p style="text-align:center;font-size:.8rem;color:#94a3b8;margin-top:.7rem" id="guestNote">Not logged in? You can still report as a guest, but <a href="login.html">logging in</a> lets you track it.</p>
+    </form>
+
+    <div class="rp-card rp-done" id="successBox" style="display:none">
+      <div class="big">✅</div>
+      <h2>Report received!</h2>
+      <p style="color:#64748b">Save your reference number to check the status later.</p>
+      <div class="rp-ref"><span id="refNumOut"></span><button type="button" id="copyBtn">Copy</button></div>
+      <p><a href="faq.html">Meanwhile, check our FAQ →</a> &nbsp;·&nbsp; <a href="report.html">Report another</a></p>
+    </div>
+  </div>
+</div>
+
+<footer><p>&copy; 2026 <strong>AquaServe</strong> | Smart Water District Management System</p></footer>
+<script src="script.js"></script>
+<script type="module">
+import { auth, db, onAuthStateChanged, collection, addDoc, serverTimestamp } from './firebase-config.js';
+import { uploadReportPhoto } from './supabase-config.js';
+
+const $ = id => document.getElementById(id);
+let currentUser = null, accountName = null, selectedType = null, selectedPriority = null;
+
+function getLocal() { try { return JSON.parse(localStorage.getItem('aquaUser') || 'null') || {}; } catch (e) { return {}; } }
+
+onAuthStateChanged(auth, (u) => {
+  currentUser = u;
+  const local = getLocal();
+  accountName = u ? (local.name || u.displayName || u.email) : null;
+  $('nameGroup').style.display = u ? 'none' : 'block';
+  $('repName').required = !u;
+  $('guestNote').style.display = u ? 'none' : 'block';
+  const chip = $('whoChip');
+  chip.style.display = 'inline-block';
+  chip.innerHTML = u ? `👤 Reporting as <strong></strong>` : `Reporting as a guest · <a href="login.html">Log in</a> to track your report`;
+  if (u) chip.querySelector('strong').textContent = accountName;
+  // Pre-fill what we already know about the customer
+  if (u) {
+    if (!$('repPhone').value && local.phone) $('repPhone').value = local.phone;
+    if (!$('repAddress').value && local.address) $('repAddress').value = local.address;
+    if (!$('repAccount').value && (local.accountNumber || local.accountNo)) $('repAccount').value = local.accountNumber || local.accountNo;
+  }
+  progress();
+});
+
+// Step 1 – issue tiles
+document.querySelectorAll('.rp-tile').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.rp-tile').forEach(x => x.classList.remove('on'));
+  t.classList.add('on');
+  selectedType = t.dataset.type; selectedPriority = t.dataset.priority;
+  $('typeErr').textContent = ''; progress();
+}));
+
+// Photo preview
+$('repPhoto').addEventListener('change', () => {
+  const f = $('repPhoto').files[0];
+  if (!f) return;
+  if (f.size > 10 * 1024 * 1024) { $('repPhoto').value = ''; return showToast('Photo is over 10MB.', 'error'); }
+  $('dropInner').innerHTML = `<img src="${URL.createObjectURL(f)}" alt="Preview"><small>Tap to change photo</small>`;
+});
+
+// Progress bar
+function progress() {
+  const done = [selectedType, $('repAddress').value.trim(), $('repPhone').value.trim(), $('repDesc').value.trim()].filter(Boolean).length;
+  $('bar').style.width = (done / 4 * 100) + '%';
+}
+['repAddress', 'repPhone', 'repDesc'].forEach(id => $(id).addEventListener('input', progress));
+
+function genRefNum() { return `REQ-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`; }
+
+$('reportForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!selectedType) { $('typeErr').textContent = 'Please pick what kind of problem it is.'; $('typeErr').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+
+  const btn = $('submitBtn');
+  btn.textContent = 'Submitting…'; btn.disabled = true;
+  const refNum = genRefNum(), photoFile = $('repPhoto').files[0];
+
+  try {
+    const photoURL = photoFile ? await uploadReportPhoto(photoFile, refNum) : null;
+    await addDoc(collection(db, 'reports'), {
+      refNum,
+      uid: currentUser ? currentUser.uid : null,
+      name: currentUser ? accountName : $('repName').value.trim(),
+      phone: $('repPhone').value.trim(),
+      address: $('repAddress').value.trim(),
+      accountNumber: $('repAccount').value.trim() || null,
+      issueType: selectedType,
+      priority: selectedPriority,
+      description: $('repDesc').value.trim(),
+      photoURL,
+      status: 'Pending',
+      assignedWorker: null,
+      createdAt: serverTimestamp(),
+    });
+    $('reportForm').style.display = 'none';
+    $('bar').style.width = '100%';
+    $('successBox').style.display = 'block';
+    $('refNumOut').textContent = refNum;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    console.error(err);
+    showToast('Error submitting report: ' + err.message, 'error');
+    btn.textContent = 'Submit Report →'; btn.disabled = false;
+  }
+});
+
+$('copyBtn').addEventListener('click', () => {
+  navigator.clipboard?.writeText($('refNumOut').textContent);
+  $('copyBtn').textContent = 'Copied ✓';
+});
+</script>
+</body>
+</html>

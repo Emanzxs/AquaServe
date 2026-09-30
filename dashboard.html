@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Dashboard – AquaServe</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .tabbar{display:flex;gap:.6rem;margin:0 0 1.5rem;flex-wrap:wrap}
+    .tabbar button{border:1.5px solid #cbd5e1;background:#fff;border-radius:12px;padding:.7rem 1.3rem;font:inherit;font-weight:700;color:#475569;cursor:pointer;transition:.15s}
+    .tabbar button:hover{border-color:#0a4f7a}
+    .tabbar button.on{background:#0a4f7a;border-color:#0a4f7a;color:#fff}
+    .tabbar .cnt{display:inline-block;min-width:22px;padding:0 .4rem;margin-left:.4rem;border-radius:99px;background:rgba(0,0,0,.12);font-size:.75rem}
+    .live{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;color:#16a34a;font-weight:700}
+    .live::before{content:"";width:8px;height:8px;border-radius:50%;background:#16a34a;animation:lv 1.4s infinite}
+    @keyframes lv{50%{opacity:.25}}
+    .bill-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem}
+    .tools{display:flex;gap:.8rem;flex-wrap:wrap;align-items:end;margin-bottom:1rem}
+    .tools .form-group{margin:0;flex:1;min-width:180px}
+    .row-btns{display:flex;gap:.4rem;flex-wrap:wrap}
+  </style>
+</head>
+<body>
+<header>
+  <a href="index.html" class="logo"><img src="assets/aquaserve-logo.png" alt="AquaServe"><h2>Aqua<span>Serve</span></h2></a>
+  <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <a href="about.html">🏛️ About</a>
+    <a href="contact.html">📞 Contact</a>
+    <a href="report.html">⚠️ Report Issue</a>
+    <a href="dashboard.html#billing">💧 Billing</a>
+    <a href="faq.html">❓ FAQ</a>
+    <a href="dashboard.html" class="active">📊 Dashboard</a>
+    <a id="adminLink" href="admin.html" style="display:none">🛡️ Admin</a>
+    <a href="login.html" class="btn btn-gold" style="margin-left:.5rem" id="loginNavBtn">Login</a>
+  </nav>
+</header>
+
+<div class="page-wrap" id="pageContent" style="display:none">
+  <h2 class="section-title">📊 Staff Dashboard</h2>
+  <p class="section-sub">Live service requests and water billing. <span class="live">Live</span></p>
+
+  <div class="tabbar">
+    <button id="tabBtn-reports" class="on" onclick="showTab('reports')">⚠️ Service Requests<span class="cnt" id="cntReports">0</span></button>
+    <button id="tabBtn-billing" onclick="showTab('billing')">💳 Billing<span class="cnt" id="cntUnpaid">0</span></button>
+  </div>
+
+  <!-- ══════ SERVICE REQUESTS ══════ -->
+  <div id="tab-reports">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total Requests</div><div class="stat-number" id="statTotal">0</div></div>
+      <div class="stat-card gold"><div class="stat-label">Pending</div><div class="stat-number" id="statPending">0</div></div>
+      <div class="stat-card"><div class="stat-label">Ongoing</div><div class="stat-number" id="statOngoing">0</div></div>
+      <div class="stat-card green"><div class="stat-label">Completed</div><div class="stat-number" id="statCompleted">0</div></div>
+    </div>
+
+    <div class="report-filter-bar">
+      <div class="form-group"><label>Filter by Status</label>
+        <select id="filterStatus"><option value="">All</option><option>Pending</option><option>Ongoing</option><option>Completed</option></select></div>
+      <div class="form-group"><label>Filter by Priority</label>
+        <select id="filterPriority"><option value="">All</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head"><h3>Service Requests</h3></div>
+      <table>
+        <thead><tr><th>Ref #</th><th>Type</th><th>Priority</th><th>Requester</th><th>Assigned To</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="reqTableBody"><tr><td colspan="7" style="text-align:center;color:var(--gray-500);padding:2rem">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════ BILLING ══════ -->
+  <div id="tab-billing" style="display:none">
+    <div class="bill-stats">
+      <div class="stat-card gold"><div class="stat-label">Outstanding</div><div class="stat-number" id="bOutstanding" style="font-size:1.5rem">₱0.00</div></div>
+      <div class="stat-card green"><div class="stat-label">Collected</div><div class="stat-number" id="bCollected" style="font-size:1.5rem">₱0.00</div></div>
+      <div class="stat-card"><div class="stat-label">Bills</div><div class="stat-number" id="bCount">0</div></div>
+    </div>
+
+    <div class="form-card" style="max-width:100%">
+      <h3 class="form-title" style="font-size:1.15rem">➕ Create a Billing Statement</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Customer</label><select id="fCustomer"></select></div>
+        <div class="form-group"><label>Account No.</label><input id="fAccount" placeholder="AQ-00123"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Billing Period</label><input id="fPeriod" placeholder="September 2026"></div>
+        <div class="form-group"><label>Due Date</label><input type="date" id="fDue"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Previous Reading (m³)</label><input type="number" id="fPrev" min="0" step="0.1"></div>
+        <div class="form-group"><label>Current Reading (m³)</label><input type="number" id="fCurr" min="0" step="0.1"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Minimum charge (first 10 m³, ₱)</label><input type="number" id="fMin" value="150"></div>
+        <div class="form-group"><label>Rate per extra m³ (₱)</label><input type="number" id="fRate" value="25"></div>
+      </div>
+      <div class="form-group"><label>Amount (₱) — auto-computed, you can override</label><input type="number" id="fAmount" min="20" step="0.01"></div>
+      <button class="btn btn-blue" id="createBtn" onclick="createBill()">Create Bill</button>
+    </div>
+
+    <div class="table-wrap" style="margin-top:2rem">
+      <div class="table-head"><h3>All Bills</h3></div>
+      <div style="padding:0 1.25rem 1rem" class="tools">
+        <div class="form-group"><label>Search customer</label><input id="billSearch" placeholder="Name…"></div>
+        <div class="form-group"><label>Status</label><select id="billStatus"><option value="">All</option><option value="Pending">Unpaid</option><option value="Paid">Paid</option></select></div>
+      </div>
+      <table>
+        <thead><tr><th>Customer</th><th>Period</th><th>Usage</th><th>Amount</th><th>Due</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="billsBody"><tr><td colspan="7" style="text-align:center;padding:2rem">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE REQUEST MODAL -->
+<div class="modal-overlay hidden" id="manageModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeManageModal()">&times;</button>
+    <h3 id="manageModalTitle">Manage Request</h3>
+    <div id="manageModalBody"></div>
+    <div class="form-group"><label>Assign Field Worker</label><input type="text" id="workerInput" list="workerList" placeholder="Worker name"><datalist id="workerList"></datalist></div>
+    <div class="form-group"><label>Status</label>
+      <select id="statusInput"><option>Pending</option><option>Ongoing</option><option>Completed</option></select></div>
+    <button class="btn btn-blue btn-full" id="saveBtn" onclick="saveManageChanges()">Save Changes</button>
+  </div>
+</div>
+
+<footer><p>&copy; 2026 <strong>AquaServe</strong> | Smart Water District Management System</p></footer>
+<script src="script.js"></script>
+<script>
+try { if (JSON.parse(localStorage.getItem('aquaUser')).role === 'admin') document.getElementById('adminLink').style.display = ''; } catch (e) {}
+</script>
+<script type="module">
+import { auth, db, onAuthStateChanged, collection, getDocs, doc, updateDoc, setDoc, addDoc, onSnapshot, serverTimestamp } from './firebase-config.js';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const peso = n => '₱' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+let allReports = [], bills = [], customers = [], _manageId = null, firstLoad = true, started = false;
+
+onAuthStateChanged(auth, (u) => {
+  let local = null; try { local = JSON.parse(localStorage.getItem('aquaUser') || 'null'); } catch (e) {}
+  if (!u || !local || !['staff', 'admin'].includes(local.role)) {
+    document.body.innerHTML = `<div class="page-wrap"><div class="access-denied"><h2>🚫 Access Denied</h2><p>Staff or Admin login required.</p><a href="login.html" class="btn btn-blue">Go to Login</a></div></div>`;
+    return;
+  }
+  if (started) return; started = true;
+  $('pageContent').style.display = 'block';
+  start();
+});
+
+async function start() {
+  showTab(location.hash === '#billing' ? 'billing' : 'reports');
+  window.addEventListener('hashchange', () => showTab(location.hash === '#billing' ? 'billing' : 'reports'));
+
+  // Live service requests
+  onSnapshot(collection(db, 'reports'), (snap) => {
+    if (!firstLoad) snap.docChanges().forEach(c => { if (c.type === 'added') showToast('New report: ' + (c.doc.data().refNum || ''), 'info'); });
+    firstLoad = false;
+    allReports = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    updateStats(); renderTable();
+  }, (e) => { console.error(e); $('reqTableBody').innerHTML = `<tr><td colspan="7" style="text-align:center;color:#dc2626;padding:2rem">Could not load requests: ${esc(e.message)}</td></tr>`; });
+
+  // Live bills
+  onSnapshot(collection(db, 'bills'), (snap) => {
+    bills = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.dueDate || '').localeCompare(a.dueDate || ''));
+    renderBills();
+  }, (e) => console.error(e));
+
+  // Customers (for billing) + staff names (for worker suggestions)
+  try {
+    const us = await getDocs(collection(db, 'users'));
+    const users = us.docs.map(d => ({ id: d.id, ...d.data() }));
+    customers = users.filter(x => (x.role || 'customer') === 'customer');
+    $('fCustomer').innerHTML = customers.map(c => `<option value="${esc(c.id)}">${esc(c.name || c.email)} (${esc(c.email)})</option>`).join('')
+      || '<option value="">No customers registered yet</option>';
+    $('workerList').innerHTML = users.filter(x => ['staff', 'admin'].includes(x.role)).map(x => `<option value="${esc(x.name || x.email)}">`).join('');
+  } catch (e) { console.error(e); }
+
+  $('fCustomer').addEventListener('change', fillAccount); fillAccount();
+  ['fPrev', 'fCurr', 'fMin', 'fRate'].forEach(id => $(id).addEventListener('input', calc));
+  ['filterStatus', 'filterPriority'].forEach(id => $(id).addEventListener('change', renderTable));
+  $('billSearch').addEventListener('input', renderBills);
+  $('billStatus').addEventListener('change', renderBills);
+}
+
+/* ───── tabs ───── */
+window.showTab = (t) => {
+  ['reports', 'billing'].forEach(x => {
+    $('tab-' + x).style.display = x === t ? 'block' : 'none';
+    $('tabBtn-' + x).classList.toggle('on', x === t);
+  });
+  if (location.hash !== (t === 'billing' ? '#billing' : '') && (t === 'billing' || location.hash)) history.replaceState(null, '', t === 'billing' ? '#billing' : location.pathname);
+};
+
+/* ───── service requests ───── */
+function updateStats() {
+  const n = s => allReports.filter(r => r.status === s).length;
+  $('statTotal').textContent = allReports.length;
+  $('statPending').textContent = n('Pending');
+  $('statOngoing').textContent = n('Ongoing');
+  $('statCompleted').textContent = n('Completed');
+  $('cntReports').textContent = n('Pending');
+}
+
+function renderTable() {
+  const sf = $('filterStatus').value, pf = $('filterPriority').value;
+  const rows = allReports.filter(r => (!sf || r.status === sf) && (!pf || r.priority === pf));
+  if (!rows.length) { $('reqTableBody').innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--gray-500);padding:2rem">No matching requests.</td></tr>`; return; }
+  const pb = { High: 'overdue', Medium: 'pending', Low: 'approved' }, sb = { Pending: 'pending', Ongoing: 'review', Completed: 'paid' };
+  $('reqTableBody').innerHTML = rows.map(r => `<tr>
+    <td><strong>${esc(r.refNum)}</strong></td><td>${esc(r.issueType)}</td>
+    <td><span class="badge ${pb[r.priority] || 'pending'}">${esc(r.priority || '—')}</span></td>
+    <td>${esc(r.name || '—')}<br><span style="font-size:.78rem;color:var(--gray-500)">${esc(r.phone || '')}</span></td>
+    <td>${r.assignedWorker ? esc(r.assignedWorker) : '<em style="color:var(--gray-500)">Unassigned</em>'}</td>
+    <td><span class="badge ${sb[r.status] || 'pending'}">${esc(r.status || 'Pending')}</span></td>
+    <td><button class="small-btn" onclick="openManageModal('${esc(r.id)}')">Manage</button></td></tr>`).join('');
+}
+
+window.openManageModal = (id) => {
+  const r = allReports.find(x => x.id === id); if (!r) return;
+  _manageId = id;
+  $('manageModalTitle').textContent = `Manage ${r.refNum}`;
+  $('manageModalBody').innerHTML = `
+    <p style="margin-bottom:1rem;color:var(--gray-700)"><strong>${esc(r.issueType)}</strong> — ${esc(r.description || '')}</p>
+    <p style="margin-bottom:1rem;font-size:.85rem;color:var(--gray-500)">📍 ${esc(r.address || '—')} &nbsp;|&nbsp; 📞 ${esc(r.phone || '—')}</p>
+    ${r.photoURL ? `<img src="${esc(r.photoURL)}" style="max-width:100%;border-radius:8px;margin-bottom:1rem">` : ''}`;
+  $('workerInput').value = r.assignedWorker || '';
+  $('statusInput').value = r.status || 'Pending';
+  $('manageModal').classList.remove('hidden');
+};
+window.closeManageModal = () => $('manageModal').classList.add('hidden');
+
+window.saveManageChanges = async () => {
+  const btn = $('saveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const worker = $('workerInput').value.trim() || null, status = $('statusInput').value;
+    await updateDoc(doc(db, 'reports', _manageId), { assignedWorker: worker, status: worker && status === 'Pending' ? 'Ongoing' : status });
+    showToast('Request updated.', 'success'); closeManageModal();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
+};
+
+/* ───── billing ───── */
+function renderBills() {
+  const q = $('billSearch').value.trim().toLowerCase(), sf = $('billStatus').value;
+  const paidSum = bills.filter(b => b.status === 'Paid').reduce((s, b) => s + Number(b.amount || 0), 0);
+  const unpaid = bills.filter(b => b.status !== 'Paid');
+  $('bOutstanding').textContent = peso(unpaid.reduce((s, b) => s + Number(b.amount || 0), 0));
+  $('bCollected').textContent = peso(paidSum);
+  $('bCount').textContent = bills.length;
+  $('cntUnpaid').textContent = unpaid.length;
+
+  const rows = bills.filter(b => (!sf || (sf === 'Paid' ? b.status === 'Paid' : b.status !== 'Paid')) && (!q || (b.customerName || '').toLowerCase().includes(q)));
+  $('billsBody').innerHTML = rows.map(b => {
+    const paid = b.status === 'Paid';
+    return `<tr>
+      <td>${esc(b.customerName || b.uid)}</td><td>${esc(b.period)}</td><td>${esc(b.consumption ?? '—')} m³</td>
+      <td>${peso(b.amount)}</td><td>${esc(b.dueDate)}</td>
+      <td><span class="badge ${paid ? 'paid' : 'pending'}">${paid ? 'Paid' : 'Unpaid'}</span></td>
+      <td>${paid ? `<span style="font-size:.78rem;color:var(--gray-500)">${esc((b.paymentMethod || '').toString().toUpperCase())}</span>`
+        : `<div class="row-btns"><button class="small-btn" onclick="markCash('${esc(b.id)}')">Mark Paid (cash)</button>
+           <button class="small-btn" style="color:#dc2626" onclick="deleteBill('${esc(b.id)}')">Delete</button></div>`}</td></tr>`;
+  }).join('') || `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-500)">No bills found.</td></tr>`;
+}
+
+// Use the customer's saved account number, or suggest the next free one (AQ-00001, AQ-00002…)
+function fillAccount() {
+  const c = customers.find(x => x.id === $('fCustomer').value);
+  if (c?.accountNumber) { $('fAccount').value = c.accountNumber; $('fAccount').title = 'Saved on this customer'; return; }
+  const nums = customers.map(x => parseInt(String(x.accountNumber || '').replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
+  $('fAccount').value = 'AQ-' + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(5, '0');
+  $('fAccount').title = 'Suggested new account number — it will be saved to the customer when you create the bill';
+}
+
+function calc() {
+  if ($('fCurr').value === '' || $('fPrev').value === '') return;
+  const cons = Math.max(0, +$('fCurr').value - +$('fPrev').value);
+  $('fAmount').value = (+$('fMin').value + Math.max(0, cons - 10) * +$('fRate').value).toFixed(2);
+}
+
+window.createBill = async () => {
+  const c = customers.find(x => x.id === $('fCustomer').value);
+  const amount = +$('fAmount').value, prev = +$('fPrev').value, curr = +$('fCurr').value;
+  const problems = [];
+  if (!c) problems.push('choose a customer');
+  if (!$('fPeriod').value.trim()) problems.push('enter the billing period (e.g. September 2026)');
+  if (!$('fDue').value) problems.push('pick a due date');
+  if ($('fPrev').value === '') problems.push('enter the previous reading');
+  if ($('fCurr').value === '') problems.push('enter the current reading');
+  if ($('fPrev').value !== '' && $('fCurr').value !== '' && curr < prev) problems.push('current reading must not be lower than the previous reading');
+  if (!(amount >= 20)) problems.push('amount must be at least ₱20 (it fills in after both readings are entered)');
+  if (problems.length) return showToast('Please ' + problems.join('; ') + '.', 'error');
+  const btn = $('createBtn'); btn.disabled = true;
+  try {
+    await addDoc(collection(db, 'bills'), {
+      uid: c.id, customerName: c.name || c.email, accountNumber: $('fAccount').value.trim() || null,
+      period: $('fPeriod').value.trim(), dueDate: $('fDue').value, amount,
+      prevReading: prev, currReading: curr, consumption: +(curr - prev).toFixed(1),
+      status: 'Pending', createdAt: serverTimestamp(),
+    });
+    const acct = $('fAccount').value.trim();
+    if (acct && !c.accountNumber) {
+      try { await updateDoc(doc(db, 'users', c.id), { accountNumber: acct }); c.accountNumber = acct; }
+      catch (e) { console.warn('Could not save account number to customer profile:', e.message); }
+    }
+    showToast('Bill created and sent to the customer.', 'success');
+    ['fPeriod', 'fPrev', 'fCurr', 'fAmount'].forEach(id => $(id).value = '');
+    fillAccount();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+  finally { btn.disabled = false; }
+};
+
+window.markCash = async (id) => {
+  if (!confirm('Confirm cash payment received for this bill?')) return;
+  try {
+    const b = bills.find(x => x.id === id);
+    await updateDoc(doc(db, 'bills', id), { status: 'Paid', paidAt: serverTimestamp(), paymentMethod: 'Cash (counter)', paymentRef: 'CASH-' + Date.now() });
+    await setDoc(doc(db, 'payments', 'cash-' + id), { uid: b.uid, billId: id, amount: b.amount, method: 'cash', status: 'Verified', recordedBy: auth.currentUser.uid, createdAt: serverTimestamp() });
+    showToast('Marked as paid.', 'success');
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+};
+
+window.deleteBill = async (id) => {
+  if (!confirm('Delete this unpaid bill? This cannot be undone.')) return;
+  try { const { deleteDoc } = await import('./firebase-config.js'); await deleteDoc(doc(db, 'bills', id)); showToast('Bill deleted.', 'success'); }
+  catch (e) { showToast('Could not delete (deleteDoc may not be exported in firebase-config.js): ' + e.message, 'error'); }
+};
+</script>
+<script>
+// Keep the full menu visible even if script.js trims it for staff/admin
+(function () {
+  var nav = document.querySelector('header nav');
+  if (!nav) return;
+  var want = [['index.html','🏠 Home'],['about.html','🏛️ About'],['contact.html','📞 Contact'],['report.html','⚠️ Report Issue'],['faq.html','❓ FAQ']];
+  var busy = false;
+  function ensure() {
+    if (busy) return; busy = true;
+    var ref = null;
+    want.forEach(function (w) {
+      var a = nav.querySelector('a[href="' + w[0] + '"]');
+      if (!a) {
+        a = document.createElement('a'); a.href = w[0]; a.textContent = w[1];
+        if (ref && ref.nextSibling) nav.insertBefore(a, ref.nextSibling);
+        else if (ref) nav.appendChild(a);
+        else nav.insertBefore(a, nav.firstChild);
+      } else if (getComputedStyle(a).display === 'none') { a.style.display = ''; }
+      ref = a;
+    });
+    busy = false;
+  }
+  ensure();
+  new MutationObserver(ensure).observe(nav, { childList: true, subtree: true, attributes: true });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ & Troubleshooting – AquaServe</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <a href="index.html" class="logo"><img src="assets/aquaserve-logo.png" alt="AquaServe"><h2>Aqua<span>Serve</span></h2></a>
+  <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <a href="about.html">🏛️ About</a>
+    <a href="contact.html">📞 Contact</a>
+    <a href="report.html">⚠️ Report Issue</a>
+    <a href="billing.html">💧 Billing</a>
+     <a href="faq.html">❓ FAQ</a>
+    <a id="dashLink" href="dashboard.html" style="display:none">📊 Dashboard</a>
+    <a id="adminLink" href="admin.html" style="display:none">🛡️ Admin</a>
+    <a href="login.html" class="btn btn-gold" style="margin-left:.5rem" id="loginNavBtn">Login</a>
+  </nav>
+</header>
+
+<div class="page-wrap">
+  <h2 class="section-title">❓ FAQ & Troubleshooting</h2>
+  <p class="section-sub">Common issues and quick fixes — resolve minor problems without submitting a request.</p>
+
+  <div class="faq-list">
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Why is my water pressure low? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Low pressure is often caused by high demand during peak hours (early morning/evening), nearby maintenance work, or a partially closed valve at your meter. Check your main valve is fully open. If the issue persists more than a day, submit a report.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">I have no water at all — what should I check first? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">First check if neighbors in your area are also affected — this may indicate a scheduled interruption or main line issue. Check your account isn't disconnected for non-payment. If neither applies, submit a "No Water Supply" report — it's automatically marked high priority.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">How do I read my water meter? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Your meter displays consumption in cubic meters (m³). Read the black digits left to right; ignore the red decimal digits for billing purposes. Compare readings month to month to spot unusual spikes that might indicate a leak.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">My bill seems higher than usual. What could cause this? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Common causes include a running toilet, a hidden leak in your plumbing, seasonal usage increases, or a longer billing period. Check all faucets and toilets for drips. If usage still looks wrong, submit a "Billing Concern" or "Meter Issue" report.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">How long does it take to resolve a reported leak? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Major leaks are prioritized as "High" and typically dispatched within 24 hours. Minor leaks and non-urgent issues are generally addressed within 3–5 business days depending on field crew availability.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">How can I pay my bill online? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Log in, go to Billing, and click "Pay Now" next to any pending bill. You'll be redirected to a secure checkout page. Once payment is confirmed, a digital receipt is generated automatically.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Can I track the status of my report? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">Yes — if you were logged in when you submitted the report, it appears under your account automatically. Save your reference number (e.g. REQ-2026-1234) either way to reference it when contacting support.</div>
+    </div>
+  </div>
+</div>
+
+<footer><p>&copy; 2026 <strong>AquaServe</strong> | Smart Water District Management System</p></footer>
+<script src="script.js"></script>
+<script>
+function toggleFaq(el){
+  const item = el.closest('.faq-item');
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+</script>
+</body>
+</html>

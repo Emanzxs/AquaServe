@@ -1,0 +1,10 @@
+// Replace the /payments block in firestore.rules with this:
+match /payments/{payId} {
+  // Customers may ONLY log a manual receipt awaiting review.
+  // "Verified" payments are written by the Cloud Function (Admin SDK bypasses rules).
+  allow create: if isStaff() ||
+                (isSignedIn() && request.resource.data.uid == myUid()
+                 && request.resource.data.status == 'Pending Review');
+  allow read:   if isSignedIn() && (resource.data.uid == myUid() || isStaff());
+  allow update, delete: if isStaff();
+}

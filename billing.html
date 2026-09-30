@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Billing – AquaServe</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .hero{display:grid;grid-template-columns:1.4fr 1fr;gap:1.25rem;margin-bottom:1.75rem}
+    @media(max-width:760px){.hero{grid-template-columns:1fr}}
+    .due-card{position:relative;overflow:hidden;border-radius:20px;padding:1.75rem;color:#fff;background:linear-gradient(135deg,#0a4f7a,#0e9ab8)}
+    .due-card::after{content:"💧";position:absolute;right:-.5rem;bottom:-1.5rem;font-size:8rem;opacity:.12}
+    .due-card small{opacity:.8;letter-spacing:.08em;text-transform:uppercase;font-size:.72rem}
+    .due-amt{font-size:2.6rem;font-weight:800;margin:.25rem 0 .5rem;line-height:1.1}
+    .due-chip{display:inline-block;background:rgba(255,255,255,.18);border-radius:999px;padding:.25rem .8rem;font-size:.8rem;margin-bottom:1.1rem}
+    .due-card .pay-btn{background:#fff;color:#0a4f7a;padding:.7rem 1.5rem;font-size:.95rem;border-radius:999px;border:0;font-weight:800;cursor:pointer}
+    .due-card .pay-btn:disabled{opacity:.6}
+    .mini-stats{display:grid;gap:.75rem}
+    .mini{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:1rem 1.25rem;display:flex;align-items:center;gap:.9rem}
+    .mini .ic{font-size:1.5rem;width:44px;height:44px;border-radius:12px;background:#e0f2fe;display:grid;place-items:center}
+    .mini b{display:block;font-size:1.15rem}.mini span{font-size:.75rem;color:#6b7280}
+    .tabs{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+    .tab{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:.4rem 1rem;font-size:.85rem;cursor:pointer;font-weight:600;color:#475569}
+    .tab.on{background:#0a4f7a;border-color:#0a4f7a;color:#fff}
+    .bill-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1rem}
+    .bill-card{background:#fff;border:1px solid #e5e7eb;border-left:5px solid #f59e0b;border-radius:14px;padding:1.1rem 1.2rem}
+    .bill-card.paid{border-left-color:#16a34a}.bill-card.late{border-left-color:#dc2626}
+    .bc-top{display:flex;justify-content:space-between;align-items:center;gap:.5rem}
+    .pill{font-size:.7rem;font-weight:700;border-radius:999px;padding:.2rem .65rem;background:#fef3c7;color:#92400e}
+    .pill.paid{background:#dcfce7;color:#166534}.pill.late{background:#fee2e2;color:#991b1b}
+    .bc-amt{font-size:1.5rem;font-weight:800;margin:.5rem 0 .1rem}
+    .bc-sub{font-size:.78rem;color:#6b7280}
+    .use-bar{height:8px;background:#e0f2fe;border-radius:99px;margin:.8rem 0 .3rem;overflow:hidden}
+    .use-bar i{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#0284c7);border-radius:99px}
+    .bc-btns{display:flex;gap:.5rem;margin-top:.9rem}
+    .bc-btns .pay-btn,.bc-btns .small-btn{flex:1;text-align:center}
+    .empty{grid-column:1/-1;text-align:center;color:#94a3b8;padding:3rem 1rem;background:#fff;border:1px dashed #cbd5e1;border-radius:14px}
+  </style>
+</head>
+<body>
+<header>
+  <a href="index.html" class="logo"><img src="assets/aquaserve-logo.png" alt="AquaServe"><h2>Aqua<span>Serve</span></h2></a>
+  <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <a href="about.html">🏛️ About</a>
+    <a href="contact.html">📞 Contact</a>
+    <a href="report.html">⚠️ Report Issue</a>
+    <a href="billing.html">💧 Billing</a>
+    <a href="faq.html">❓ FAQ</a>
+    <a id="dashLink" href="dashboard.html" style="display:none">📊 Dashboard</a>
+    <a id="adminLink" href="admin.html" style="display:none">🛡️ Admin</a>
+    <a href="login.html" class="btn btn-gold" style="margin-left:.5rem" id="loginNavBtn">Login</a>
+  </nav>
+</header>
+
+<div class="page-wrap">
+  <div id="notLoggedIn" style="display:none" class="access-denied">
+    <h2>🔒 Please Log In</h2>
+    <p>Sign in to view your water bills and payment history.</p>
+    <a href="login.html" class="btn btn-blue">Go to Login</a>
+  </div>
+
+  <!-- CUSTOMER VIEW -->
+  <div id="customerView" style="display:none">
+    <h2 class="section-title">💧 My Water Bills</h2>
+    <p class="section-sub">Signed in as <strong id="acctDisplay">—</strong></p>
+
+    <div class="hero">
+      <div class="due-card">
+        <small id="heroLabel">Total amount due</small>
+        <div class="due-amt" id="heroAmount">₱0.00</div>
+        <div class="due-chip" id="heroDue">—</div><br>
+        <button class="pay-btn" id="heroPay" style="display:none" onclick="payNext(this)">Pay now</button>
+      </div>
+      <div class="mini-stats">
+        <div class="mini"><div class="ic">🧾</div><div><b id="sumTotalBills">0</b><span>Bills on record</span></div></div>
+        <div class="mini"><div class="ic">🚰</div><div><b id="sumUsage">—</b><span>Latest usage</span></div></div>
+        <div class="mini"><div class="ic">✅</div><div><b id="sumPaid">0</b><span>Bills paid</span></div></div>
+      </div>
+    </div>
+
+    <div class="tabs" id="billTabs">
+      <button class="tab on" data-f="">All</button>
+      <button class="tab" data-f="Pending">Unpaid</button>
+      <button class="tab" data-f="Paid">Paid</button>
+    </div>
+    <div class="bill-grid" id="billsTableBody"><div class="empty">Loading…</div></div>
+  </div>
+
+  <!-- STAFF / ADMIN VIEW -->
+  <div id="staffView" style="display:none">
+    <h2 class="section-title">💳 Manage Bills</h2>
+    <p class="section-sub">Create monthly water bills. Online payments mark them Paid automatically.</p>
+
+    <div class="form-card" style="max-width:100%">
+      <h3 class="form-title" style="font-size:1.15rem">Create a Bill</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Customer</label><select id="fCustomer"></select></div>
+        <div class="form-group"><label>Account No.</label><input id="fAccount" placeholder="AQ-00123"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Billing Period</label><input id="fPeriod" placeholder="September 2026"></div>
+        <div class="form-group"><label>Due Date</label><input type="date" id="fDue"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Previous Reading (m³)</label><input type="number" id="fPrev" min="0" step="0.1"></div>
+        <div class="form-group"><label>Current Reading (m³)</label><input type="number" id="fCurr" min="0" step="0.1"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Minimum charge (first 10 m³, ₱)</label><input type="number" id="fMin" value="150"></div>
+        <div class="form-group"><label>Rate per extra m³ (₱)</label><input type="number" id="fRate" value="25"></div>
+      </div>
+      <div class="form-group"><label>Amount (₱) — auto-computed, you can override</label><input type="number" id="fAmount" min="20" step="0.01"></div>
+      <button class="btn btn-blue" onclick="createBill()">Create Bill</button>
+    </div>
+
+    <div class="table-wrap" style="margin-top:2rem">
+      <div class="table-head"><h3>All Bills</h3></div>
+      <table>
+        <thead><tr><th>Customer</th><th>Period</th><th>Amount</th><th>Due</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="staffBody"><tr><td colspan="6" style="text-align:center;padding:2rem">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- STATEMENT MODAL (customer) -->
+<div class="modal-overlay hidden" id="stmtModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeStmt()">&times;</button>
+    <div id="stmtBody"></div>
+    <div style="display:flex;gap:.6rem;margin-top:1rem">
+      <button class="btn btn-blue" style="flex:1" onclick="printStmt()">🖨️ Print</button>
+      <button class="pay-btn" style="flex:1" id="stmtPayBtn" onclick="payFromStmt()">Pay Now</button>
+    </div>
+  </div>
+</div>
+
+<footer><p>&copy; 2026 <strong>AquaServe</strong> | Smart Water District Management System</p></footer>
+<script src="script.js"></script>
+<script type="module">
+import { auth, db, onAuthStateChanged, collection, addDoc, doc, getDocs, updateDoc, setDoc, query, where, onSnapshot, serverTimestamp } from './firebase-config.js';
+import { startCheckout, verifyPayment } from './paymongo.js';
+
+const $ = id => document.getElementById(id);
+const peso = n => '₱' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+const fmtDate = t => t?.toDate ? t.toDate().toLocaleDateString('en-PH', { dateStyle: 'medium' }) : '—';
+let user = null, bills = [], customers = [], stmtId = null;
+
+onAuthStateChanged(auth, async (u) => {
+  if (!u) { $('notLoggedIn').style.display = 'block'; return; }
+  user = u;
+  const local = JSON.parse(localStorage.getItem('aquaUser') || 'null');
+  if (['staff', 'admin'].includes(local?.role)) await startStaff(); else startCustomer();
+});
+
+/* ═══════════ CUSTOMER ═══════════ */
+let filter = '', nextBill = null;
+function startCustomer() {
+  $('customerView').style.display = 'block';
+  $('acctDisplay').textContent = user.email;
+  // Live listener: updates the moment the server marks a bill Paid.
+  onSnapshot(query(collection(db, 'bills'), where('uid', '==', user.uid)), (snap) => {
+    bills = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderCustomer();
+  });
+  $('billTabs').addEventListener('click', (e) => {
+    const t = e.target.closest('.tab'); if (!t) return;
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+    filter = t.dataset.f; renderCustomer();
+  });
+  handleReturn();
+}
+
+function renderCustomer() {
+  bills.sort((a, b) => (b.dueDate || '').localeCompare(a.dueDate || ''));
+  const today = new Date().toISOString().slice(0, 10);
+  const unpaid = bills.filter(b => b.status === 'Pending').sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+  nextBill = unpaid[0] || null;
+  $('heroAmount').textContent = peso(unpaid.reduce((s, b) => s + Number(b.amount || 0), 0));
+  $('heroLabel').textContent = unpaid.length ? `Total amount due · ${unpaid.length} unpaid` : 'Total amount due';
+  $('heroDue').textContent = nextBill ? `${nextBill.dueDate < today ? '⚠️ Overdue since' : 'Next due'} ${nextBill.dueDate}` : '🎉 You’re all paid up';
+  $('heroPay').style.display = nextBill ? 'inline-block' : 'none';
+  if (nextBill) $('heroPay').textContent = `Pay ${nextBill.period || 'next bill'} · ${peso(nextBill.amount)}`;
+  $('sumTotalBills').textContent = bills.length;
+  $('sumPaid').textContent = bills.filter(b => b.status === 'Paid').length;
+  $('sumUsage').textContent = bills.length ? (bills[0].consumption ?? '—') + ' m³' : '—';
+
+  const rows = bills.filter(b => !filter || b.status === filter);
+  const max = Math.max(...bills.map(b => Number(b.consumption || 0)), 1);
+  $('billsTableBody').innerHTML = rows.length ? rows.map(b => {
+    const pending = b.status === 'Pending', late = pending && b.dueDate < today;
+    const cls = !pending ? 'paid' : late ? 'late' : '';
+    return `<div class="bill-card ${cls}">
+      <div class="bc-top"><strong>${b.period || '—'}</strong><span class="pill ${cls}">${!pending ? '✓ Paid' : late ? 'Overdue' : 'Unpaid'}</span></div>
+      <div class="bc-amt">${peso(b.amount)}</div>
+      <div class="bc-sub">Due ${b.dueDate || '—'}</div>
+      <div class="use-bar"><i style="width:${Math.max(4, (Number(b.consumption || 0) / max) * 100)}%"></i></div>
+      <div class="bc-sub">${b.consumption ?? '—'} m³ used</div>
+      <div class="bc-btns"><button class="small-btn" onclick="openStmt('${b.id}')">View</button>
+        ${pending ? `<button class="pay-btn" onclick="payBill('${b.id}',this)">Pay</button>` : ''}</div>
+    </div>`;
+  }).join('') : '<div class="empty">No billing records found.</div>';
+  if (stmtId) openStmt(stmtId); // refresh an open statement (flips to PAID live)
+}
+window.payNext = (btn) => nextBill && payBill(nextBill.id, btn);
+
+window.openStmt = (id) => {
+  const b = bills.find(x => x.id === id); if (!b) return;
+  stmtId = id;
+  const paid = b.status === 'Paid';
+  const row = (l, v) => `<tr><td style="color:var(--gray-500);padding:.35rem 0">${l}</td><td style="text-align:right;font-weight:600">${v}</td></tr>`;
+  $('stmtBody').innerHTML = `
+    <div id="stmtPrint">
+      <h3 style="margin-bottom:.15rem">AquaServe Billing Statement</h3>
+      <p style="color:var(--gray-500);font-size:.85rem;margin-bottom:.75rem">${b.period || ''} · ${b.customerName || user.email}</p>
+      <div style="text-align:center;margin:.5rem 0 1rem"><span class="badge ${paid ? 'paid' : 'pending'}" style="font-size:.95rem;padding:.4rem 1.2rem">${paid ? '✓ PAID' : 'UNPAID'}</span></div>
+      <table style="width:100%;border-collapse:collapse">
+        ${row('Account No.', b.accountNumber || '—')}
+        ${row('Previous reading', b.prevReading != null ? b.prevReading + ' m³' : '—')}
+        ${row('Current reading', b.currReading != null ? b.currReading + ' m³' : '—')}
+        ${row('Consumption', (b.consumption ?? '—') + ' m³')}
+        ${row('Due date', b.dueDate || '—')}
+        <tr><td colspan="2"><hr></td></tr>
+        ${row('Amount', `<span style="font-size:1.15rem">${peso(b.amount)}</span>`)}
+        ${paid ? row('Paid on', fmtDate(b.paidAt)) + row('Method', (b.paymentMethod || '—').toString().toUpperCase()) + row('Reference', b.paymentRef || '—') : ''}
+      </table>
+    </div>`;
+  $('stmtPayBtn').style.display = paid ? 'none' : 'block';
+  $('stmtModal').classList.remove('hidden');
+};
+window.closeStmt = () => { stmtId = null; $('stmtModal').classList.add('hidden'); };
+window.payFromStmt = () => payBill(stmtId, $('stmtPayBtn'));
+window.printStmt = () => {
+  const w = window.open('', '_blank');
+  w.document.body.style.cssText = 'font-family:sans-serif;max-width:420px;margin:2rem auto';
+  w.document.body.innerHTML = $('stmtPrint').innerHTML;
+  w.print();
+};
+
+window.payBill = async (id, btn) => {
+  const label = btn.textContent; btn.disabled = true; btn.textContent = 'Redirecting…';
+  try { await startCheckout(id, user); }
+  catch (e) { btn.disabled = false; btn.textContent = label; showToast('Could not start payment: ' + e.message, 'error'); }
+};
+
+// Back from PayMongo: the webhook normally marks the bill Paid within seconds;
+// we also ask the server to check PayMongo directly as a backup.
+async function handleReturn() {
+  const p = new URLSearchParams(location.search), status = p.get('pm'), id = p.get('bill');
+  if (!status) return;
+  history.replaceState({}, '', location.pathname);
+  if (status === 'cancelled') return showToast('Payment was cancelled.', 'info');
+  showToast('Confirming your payment…', 'info');
+  for (let i = 0; i < 6; i++) {
+    if (await verifyPayment(id, user)) return showToast('Payment confirmed — bill marked as Paid. Thank you!', 'success');
+    await new Promise(r => setTimeout(r, 4000));
+  }
+  showToast('Still processing. This page will update automatically once confirmed.', 'info');
+}
+
+/* ═══════════ STAFF / ADMIN ═══════════ */
+async function startStaff() {
+  $('staffView').style.display = 'block';
+  const us = await getDocs(collection(db, 'users'));
+  customers = us.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => (x.role || 'customer') === 'customer');
+  $('fCustomer').innerHTML = customers.map(c => `<option value="${c.id}">${c.name || c.email} (${c.email})</option>`).join('');
+  onSnapshot(collection(db, 'bills'), (snap) => {
+    bills = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    bills.sort((a, b) => (b.dueDate || '').localeCompare(a.dueDate || ''));
+    $('staffBody').innerHTML = bills.map(b => `<tr>
+      <td>${b.customerName || b.uid}</td><td>${b.period}</td><td>${peso(b.amount)}</td><td>${b.dueDate}</td>
+      <td><span class="badge ${b.status === 'Paid' ? 'paid' : 'pending'}">${b.status === 'Paid' ? 'Paid' : 'Unpaid'}</span></td>
+      <td>${b.status === 'Paid' ? `<span style="font-size:.78rem;color:var(--gray-500)">${(b.paymentMethod || '').toUpperCase()}</span>`
+        : `<button class="small-btn" onclick="markCash('${b.id}')">Mark Paid (cash)</button>`}</td></tr>`).join('')
+      || `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-500)">No bills yet.</td></tr>`;
+  });
+  ['fPrev', 'fCurr', 'fMin', 'fRate'].forEach(id => $(id).addEventListener('input', calc));
+}
+
+function calc() {
+  if ($('fCurr').value === '' || $('fPrev').value === '') return;
+  const cons = Math.max(0, Number($('fCurr').value) - Number($('fPrev').value));
+  $('fAmount').value = (Number($('fMin').value) + Math.max(0, cons - 10) * Number($('fRate').value)).toFixed(2);
+}
+
+window.createBill = async () => {
+  const c = customers.find(x => x.id === $('fCustomer').value);
+  const amount = Number($('fAmount').value), prev = Number($('fPrev').value), curr = Number($('fCurr').value);
+  if (!c || !$('fPeriod').value || !$('fDue').value || !(amount >= 20) || curr < prev)
+    return showToast('Check the form: customer, period, due date, readings and amount (min ₱20).', 'error');
+  try {
+    await addDoc(collection(db, 'bills'), {
+      uid: c.id, customerName: c.name || c.email, accountNumber: $('fAccount').value.trim() || null,
+      period: $('fPeriod').value.trim(), dueDate: $('fDue').value, amount,
+      prevReading: prev, currReading: curr, consumption: +(curr - prev).toFixed(1),
+      status: 'Pending', createdAt: serverTimestamp(),
+    });
+    showToast('Bill created.', 'success');
+    ['fPeriod', 'fPrev', 'fCurr', 'fAmount'].forEach(id => $(id).value = '');
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+};
+
+// Walk-in / over-the-counter payment
+window.markCash = async (id) => {
+  if (!confirm('Confirm cash payment received for this bill?')) return;
+  try {
+    const b = bills.find(x => x.id === id);
+    await updateDoc(doc(db, 'bills', id), { status: 'Paid', paidAt: serverTimestamp(), paymentMethod: 'Cash (counter)', paymentRef: 'CASH-' + Date.now() });
+    await setDoc(doc(db, 'payments', 'cash-' + id), { uid: b.uid, billId: id, amount: b.amount, method: 'cash', status: 'Verified', recordedBy: auth.currentUser.uid, createdAt: serverTimestamp() });
+    showToast('Marked as paid.', 'success');
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+};
+</script>
+</body>
+</html>

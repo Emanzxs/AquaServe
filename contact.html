@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact – AquaServe</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <a href="index.html" class="logo"><img src="assets/aquaserve-logo.png" alt="AquaServe"><h2>Aqua<span>Serve</span></h2></a>
+  <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <a href="about.html">🏛️ About</a>
+    <a href="contact.html">📞 Contact</a>
+    <a href="report.html">⚠️ Report Issue</a>
+    <a href="billing.html">💧 Billing</a>
+     <a href="faq.html">❓ FAQ</a>
+    <a id="dashLink" href="dashboard.html" style="display:none">📊 Dashboard</a>
+    <a id="adminLink" href="admin.html" style="display:none">🛡️ Admin</a>
+    <a href="login.html" class="btn btn-gold" style="margin-left:.5rem" id="loginNavBtn">Login</a>
+  </nav>
+</header>
+
+<div class="page-wrap">
+  <h2 class="section-title">📞 Contact Us</h2>
+  <p class="section-sub">Reach out for urgent concerns or general inquiries.</p>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Hotline</div><div class="stat-number" style="font-size:1.1rem">(0XX) XXX-XXXX</div></div>
+    <div class="stat-card"><div class="stat-label">Email</div><div class="stat-number" style="font-size:1.1rem">support@aquaserve.ph</div></div>
+    <div class="stat-card"><div class="stat-label">Office Hours</div><div class="stat-number" style="font-size:1.1rem">Mon–Fri, 8AM–5PM</div></div>
+  </div>
+
+  <div class="form-card">
+    <h3 class="form-title" style="font-size:1.2rem">Send a Message</h3>
+    <form id="contactForm">
+      <div class="form-row">
+        <div class="form-group"><label>Name</label><input type="text" required></div>
+        <div class="form-group"><label>Email</label><input type="email" required></div>
+      </div>
+      <div class="form-group"><label>Message</label><textarea required placeholder="How can we help?"></textarea></div>
+      <button type="submit" class="btn btn-blue btn-full">Send Message</button>
+    </form>
+  </div>
+</div>
+
+<footer><p>&copy; 2026 <strong>AquaServe</strong> | Smart Water District Management System</p></footer>
+<script src="script.js"></script>
+<script>
+document.getElementById('contactForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  showToast('Message sent! We\'ll get back to you soon.', 'success');
+  e.target.reset();
+});
+</script>
+</body>
+</html>

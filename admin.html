@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel – AquaServe</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <a href="index.html" class="logo"><img src="assets/aquaserve-logo.png" alt="AquaServe"><h2>Aqua<span>Serve</span></h2></a>
+  <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <a href="about.html">🏛️ About</a>
+    <a href="contact.html">📞 Contact</a>
+    <a href="report.html">⚠️ Report Issue</a>
+    <a href="dashboard.html#billing">💧 Billing</a>
+    <a href="faq.html">❓ FAQ</a>
+    <a href="dashboard.html">📊 Dashboard</a>
+    <a id="adminLink" href="admin.html" class="active">🛡️ Admin</a>
+    <a href="login.html" class="btn btn-gold" style="margin-left:.5rem" id="loginNavBtn">Login</a>
+  </nav>
+</header>
+
+<div class="page-wrap" id="pageContent" style="display:none">
+  <h2 class="section-title">🛡️ Admin Panel</h2>
+  <p class="section-sub">System-wide analytics, user management, and reporting.</p>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Total Requests</div><div class="stat-number" id="aTotal">0</div></div>
+    <div class="stat-card green"><div class="stat-label">Resolved</div><div class="stat-number" id="aResolved">0</div></div>
+    <div class="stat-card gold"><div class="stat-label">Avg. Rating</div><div class="stat-number" id="aRating">—</div></div>
+    <div class="stat-card"><div class="stat-label">Registered Users</div><div class="stat-number" id="aUsers">0</div></div>
+  </div>
+
+  <div class="action-strip">
+    <div class="action-btn active-tab" onclick="switchTab('users', this)"><span class="ab-icon">👥</span>Manage Users</div>
+    <div class="action-btn" onclick="switchTab('issues', this)"><span class="ab-icon">📈</span>Issue Breakdown</div>
+    <div class="action-btn" onclick="switchTab('reports', this)"><span class="ab-icon">📄</span>Generate Reports</div>
+  </div>
+
+  <div id="tab-users">
+    <div class="table-wrap">
+      <div class="table-head"><h3>All Users</h3></div>
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
+        <tbody id="usersTableBody"><tr><td colspan="4" style="text-align:center;color:var(--gray-500);padding:2rem">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-issues" style="display:none">
+    <div class="table-wrap">
+      <div class="table-head"><h3>Requests by Issue Type</h3></div>
+      <table>
+        <thead><tr><th>Issue Type</th><th>Count</th><th>Avg. Priority</th></tr></thead>
+        <tbody id="issueTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-reports" style="display:none">
+    <div class="form-card">
+      <h3 class="form-title" style="font-size:1.15rem">Generate a Report</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Report Type</label>
+          <select id="reportType">
+            <option value="requests">Service Requests Summary</option>
+            <option value="payments">Payments Summary</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Date Range</label>
+          <select id="reportRange">
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last 12 months</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-blue" onclick="generateReport()">Generate</button>
+      <div id="reportOutput" style="margin-top:1.5rem"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="roleModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeRoleModal()">&times;</button>
+    <h3>Change User Role</h3>
+    <p id="roleModalName" style="color:var(--gray-500);margin-bottom:1rem"></p>
+    <div class="form-group">
+      <label>Role</label>
+      <select id="roleSelect">
+        <option value="customer">Customer</option>
+        <option value="staff">Staff</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <button class="btn btn-blue btn-full" onclick="saveRoleChange()">Save</button>
+  </div>
+</div>
+
+<footer><p>&copy; 2026 <strong>AquaServe</strong> | Smart Water District Management System</p></footer>
+<script src="script.js"></script>
+<script type="module">
+import { auth, db, onAuthStateChanged, collection, getDocs, doc, updateDoc, query } from './firebase-config.js';
+
+let allUsers = [], allReports = [], allFeedback = [];
+let _roleUid = null;
+
+onAuthStateChanged(auth, async (u) => {
+  const localUser = JSON.parse(localStorage.getItem('aquaUser') || 'null');
+  if (!u || !localUser || localUser.role !== 'admin') {
+    document.body.innerHTML = `<div class="page-wrap"><div class="access-denied"><h2>🚫 Access Denied</h2><p>Admin login required.</p><a href="login.html" class="btn btn-blue">Go to Login</a></div></div>`;
+    return;
+  }
+  document.getElementById('pageContent').style.display = 'block';
+  await loadAll();
+});
+
+async function loadAll() {
+  const [usersSnap, reportsSnap, fbSnap] = await Promise.all([
+    getDocs(collection(db, 'users')),
+    getDocs(collection(db, 'reports')),
+    getDocs(collection(db, 'feedback')),
+  ]);
+  allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allReports = reportsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allFeedback = fbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  document.getElementById('aTotal').textContent = allReports.length;
+  document.getElementById('aResolved').textContent = allReports.filter(r => r.status === 'Completed').length;
+  document.getElementById('aUsers').textContent = allUsers.length;
+  const avgRating = allFeedback.length
+    ? (allFeedback.reduce((s, f) => s + (f.rating || 0), 0) / allFeedback.length).toFixed(1)
+    : '—';
+  document.getElementById('aRating').textContent = avgRating;
+
+  renderUsers();
+  renderIssueBreakdown();
+}
+
+function renderUsers() {
+  document.getElementById('usersTableBody').innerHTML = allUsers.map(u => `
+    <tr>
+      <td>${u.name || '—'}</td>
+      <td>${u.email || '—'}</td>
+      <td><span class="badge approved">${u.role || 'customer'}</span></td>
+      <td><button class="small-btn" onclick="openRoleModal('${u.uid || u.id}','${(u.name || u.email || '').replace(/'/g, "\\'")}','${u.role || 'customer'}')">Change Role</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderIssueBreakdown() {
+  const counts = {};
+  allReports.forEach(r => {
+    const t = r.issueType || 'Other';
+    counts[t] = counts[t] || { count: 0, priorities: [] };
+    counts[t].count++;
+    counts[t].priorities.push(r.priority);
+  });
+  const rows = Object.entries(counts).map(([type, data]) => {
+    const mostCommon = data.priorities.sort((a, b) =>
+      data.priorities.filter(p => p === b).length - data.priorities.filter(p => p === a).length
+    )[0];
+    return `<tr><td>${type}</td><td>${data.count}</td><td>${mostCommon || '—'}</td></tr>`;
+  }).join('');
+  document.getElementById('issueTableBody').innerHTML = rows || `<tr><td colspan="3" style="text-align:center;color:var(--gray-500);padding:2rem">No data yet.</td></tr>`;
+}
+
+window.switchTab = (tab, el) => {
+  ['users', 'issues', 'reports'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active-tab'));
+  el.classList.add('active-tab');
+};
+
+window.openRoleModal = (uid, name, currentRole) => {
+  _roleUid = uid;
+  document.getElementById('roleModalName').textContent = name;
+  document.getElementById('roleSelect').value = currentRole;
+  document.getElementById('roleModal').classList.remove('hidden');
+};
+window.closeRoleModal = () => document.getElementById('roleModal').classList.add('hidden');
+
+window.saveRoleChange = async () => {
+  try {
+    await updateDoc(doc(db, 'users', _roleUid), { role: document.getElementById('roleSelect').value });
+    showToast('Role updated.', 'success');
+    closeRoleModal();
+    await loadAll();
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+};
+
+window.generateReport = () => {
+  const type = document.getElementById('reportType').value;
+  const days = Number(document.getElementById('reportRange').value);
+  const cutoff = Date.now() - days * 86400000;
+
+  if (type === 'requests') {
+    const filtered = allReports.filter(r => {
+      const t = r.createdAt?.toDate ? r.createdAt.toDate().getTime() : 0;
+      return t >= cutoff;
+    });
+    document.getElementById('reportOutput').innerHTML = `
+      <div class="form-info">Found <strong>${filtered.length}</strong> requests in the selected range.
+      Pending: ${filtered.filter(r=>r.status==='Pending').length} ·
+      Ongoing: ${filtered.filter(r=>r.status==='Ongoing').length} ·
+      Completed: ${filtered.filter(r=>r.status==='Completed').length}</div>`;
+  } else {
+    document.getElementById('reportOutput').innerHTML = `
+      <div class="form-info">Payments reporting requires the <code>payments</code> collection — wire this up once billing data is populated.</div>`;
+  }
+};
+</script>
+<script>
+// Keep the full menu visible even if script.js trims it for staff/admin
+(function () {
+  var nav = document.querySelector('header nav');
+  if (!nav) return;
+  var want = [['index.html','🏠 Home'],['about.html','🏛️ About'],['contact.html','📞 Contact'],['report.html','⚠️ Report Issue'],['faq.html','❓ FAQ']];
+  var busy = false;
+  function ensure() {
+    if (busy) return; busy = true;
+    var ref = null;
+    want.forEach(function (w) {
+      var a = nav.querySelector('a[href="' + w[0] + '"]');
+      if (!a) {
+        a = document.createElement('a'); a.href = w[0]; a.textContent = w[1];
+        if (ref && ref.nextSibling) nav.insertBefore(a, ref.nextSibling);
+        else if (ref) nav.appendChild(a);
+        else nav.insertBefore(a, nav.firstChild);
+      } else if (getComputedStyle(a).display === 'none') { a.style.display = ''; }
+      ref = a;
+    });
+    busy = false;
+  }
+  ensure();
+  new MutationObserver(ensure).observe(nav, { childList: true, subtree: true, attributes: true });
+})();
+</script>
+</body>
+</html>

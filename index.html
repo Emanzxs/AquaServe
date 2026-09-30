@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AquaServe – Smart Water District Management</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .hm-hero{display:grid;grid-template-columns:1.1fr .9fr;gap:2.5rem;align-items:center;padding:2.5rem 0 3rem}
+    @media(max-width:860px){.hm-hero{grid-template-columns:1fr}}
+    .hm-eyebrow{display:inline-flex;align-items:center;gap:.5rem;color:#0e7490;font-weight:700;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase}
+    .hm-eyebrow::before{content:"";width:28px;height:3px;border-radius:9px;background:#0e9ab8}
+    .hm-hero h1{font-size:clamp(2.2rem,5vw,3.4rem);line-height:1.08;margin:.8rem 0 1rem;color:#0a3d5c}
+    .hm-hero h1 em{font-style:normal;background:linear-gradient(90deg,#0284c7,#14b8a6);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .hm-hero p{font-size:1.08rem;color:#475569;max-width:520px;line-height:1.7}
+    .hm-cta{display:flex;flex-wrap:wrap;gap:.8rem;margin-top:1.6rem}
+    .hm-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.9rem 1.5rem;border-radius:14px;font-weight:700;text-decoration:none;transition:.2s}
+    .hm-btn.main{background:#0a4f7a;color:#fff;box-shadow:0 8px 20px rgba(10,79,122,.25)}
+    .hm-btn.main:hover{transform:translateY(-2px)}
+    .hm-btn.ghost{background:#fff;color:#0a4f7a;border:2px solid #cfe6f1}
+    .hm-btn.ghost:hover{border-color:#0a4f7a}
+    .hm-trust{display:flex;flex-wrap:wrap;gap:1.2rem;margin-top:1.6rem;font-size:.85rem;color:#64748b}
+    .hm-trust span::before{content:"✓ ";color:#16a34a;font-weight:800}
+
+    .hm-panel{position:relative;background:linear-gradient(160deg,#e0f7fb,#dbeafe);border-radius:28px;padding:1.4rem;overflow:hidden}
+    .hm-panel::before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;background:rgba(14,154,184,.18);top:-90px;right:-70px}
+    .hm-panel h3{position:relative;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:#0e7490;margin-bottom:.8rem}
+    .hm-action{position:relative;display:flex;align-items:center;gap:1rem;background:#fff;border-radius:16px;padding:1rem 1.1rem;margin-bottom:.7rem;text-decoration:none;color:inherit;box-shadow:0 4px 14px rgba(10,79,122,.08);transition:.2s}
+    .hm-action:hover{transform:translateX(6px)}
+    .hm-action .ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:1.5rem;flex:none}
+    .hm-action b{display:block;color:#0a3d5c}
+    .hm-action small{color:#64748b}
+    .hm-action .go{margin-left:auto;color:#0284c7;font-weight:800}
+
+    .hm-sec{margin:0 0 3.2rem}
+    .hm-sec h2{text-align:center;font-size:1.7rem;color:#0a3d5c;margin-bottom:.3rem}
+    .hm-sec>p{text-align:center;color:#64748b;margin-bottom:1.8rem}
+    .hm-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;counter-reset:s}
+    @media(max-width:760px){.hm-steps{grid-template-columns:1fr}}
+    .hm-step{position:relative;background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:1.6rem 1.4rem 1.4rem}
+    .hm-step::before{counter-increment:s;content:counter(s);position:absolute;top:-16px;left:1.3rem;width:34px;height:34px;border-radius:50%;background:#0a4f7a;color:#fff;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 5px #f6f8fc}
+    .hm-step .e{font-size:2rem}
+    .hm-step h4{margin:.4rem 0 .3rem;color:#0a3d5c}
+    .hm-step p{font-size:.9rem;color:#64748b;line-height:1.6}
+
+    .hm-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
+    .hm-fact{border-radius:18px;padding:1.3rem;color:#fff}
+    .hm-fact b{display:block;font-size:1.5rem;margin-bottom:.2rem}
+    .hm-fact span{font-size:.85rem;opacity:.9}
+
+    .hm-staff{display:none;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+    .hm-staff a{display:flex;gap:.9rem;align-items:center;background:#fff;border:1px dashed #94a3b8;border-radius:16px;padding:1rem 1.2rem;text-decoration:none;color:#0a3d5c;font-weight:700}
+
+    .hm-band{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:1rem;background:#0a3d5c;color:#fff;border-radius:24px;padding:1.8rem 2rem}
+    .hm-band h3{font-size:1.3rem;margin-bottom:.2rem}
+    .hm-band p{opacity:.8;font-size:.92rem}
+    .hm-band a{background:#fff;color:#0a3d5c;font-weight:800;text-decoration:none;padding:.85rem 1.5rem;border-radius:14px}
+  </style>
+</head>
+<body>
+<header>
+  <a href="index.html" class="logo">
+    <img src="assets/aquaserve-logo.png" alt="AquaServe">
+    <h2>Aqua<span>Serve</span></h2>
+  </a>
+  <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <nav>
+    <a href="index.html">🏠 Home</a>
+    <a href="about.html">🏛️ About</a>
+    <a href="contact.html">📞 Contact</a>
+    <a href="report.html">⚠️ Report Issue</a>
+    <a href="billing.html">💧 Billing</a>
+    <a href="faq.html">❓ FAQ</a>
+    <a id="dashLink" href="dashboard.html" style="display:none">📊 Dashboard</a>
+    <a id="adminLink" href="admin.html" style="display:none">🛡️ Admin</a>
+    <a href="login.html" class="btn btn-gold" style="margin-left:.5rem" id="loginNavBtn">Login</a>
+  </nav>
+</header>
+
+<div class="page-wrap">
+
+  <section class="hm-hero">
+    <div>
+      <span class="hm-eyebrow">Smart Water District</span>
+      <h1>Water problems, <em>solved faster.</em></h1>
+      <p>Report a leak in a minute, follow the repair, and pay your water bill from your phone. No lines, no phone tag.</p>
+      <div class="hm-cta">
+        <a href="report.html" class="hm-btn main">⚠️ Report a problem</a>
+        <a href="billing.html" class="hm-btn ghost">💧 See my bill</a>
+      </div>
+      <div class="hm-trust"><span>Photo reports</span><span>GCash · Maya · Cards</span><span>Live status updates</span></div>
+    </div>
+
+    <div class="hm-panel">
+      <h3>What do you need today?</h3>
+      <a href="report.html" class="hm-action"><div class="ic" style="background:#fee2e2">💦</div><div><b>Report a leak or outage</b><small>Takes about a minute</small></div><span class="go">→</span></a>
+      <a href="billing.html" class="hm-action"><div class="ic" style="background:#dbeafe">🧾</div><div><b>Pay my water bill</b><small>Secure online checkout</small></div><span class="go">→</span></a>
+      <a href="faq.html" class="hm-action"><div class="ic" style="background:#dcfce7">💡</div><div><b>Quick fixes &amp; answers</b><small>Try this before you report</small></div><span class="go">→</span></a>
+      <a href="contact.html" class="hm-action" style="margin-bottom:0"><div class="ic" style="background:#fef3c7">📞</div><div><b>Talk to our office</b><small>Mon–Fri, 8AM–5PM</small></div><span class="go">→</span></a>
+    </div>
+  </section>
+
+  <section class="hm-sec">
+    <h2>How it works</h2>
+    <p>From the first report to a fixed pipe, in three steps.</p>
+    <div class="hm-steps">
+      <div class="hm-step"><div class="e">📱</div><h4>You report</h4><p>Pick the problem, add your address and a photo. Get a reference number right away.</p></div>
+      <div class="hm-step"><div class="e">🧑‍🔧</div><h4>We dispatch</h4><p>Staff prioritize the request and assign a field worker. Urgent leaks and outages go first.</p></div>
+      <div class="hm-step"><div class="e">✅</div><h4>It’s fixed &amp; tracked</h4><p>Your report moves from Pending to Ongoing to Completed, so you always know where it stands.</p></div>
+    </div>
+  </section>
+
+  <section class="hm-sec">
+    <div class="hm-facts">
+      <div class="hm-fact" style="background:linear-gradient(135deg,#0284c7,#0ea5e9)"><b>24 hrs</b><span>Target dispatch for high-priority issues</span></div>
+      <div class="hm-fact" style="background:linear-gradient(135deg,#0d9488,#14b8a6)"><b>3 ways to pay</b><span>GCash, Maya or card, right from your phone</span></div>
+      <div class="hm-fact" style="background:linear-gradient(135deg,#0a4f7a,#1e6f9f)"><b>Always on</b><span>Report and pay any time of day</span></div>
+    </div>
+  </section>
+
+  <section class="hm-sec" id="staffTools">
+    <div class="hm-staff" id="staffRow">
+      <a href="dashboard.html" id="dashSvcCard" style="display:none">📊 <span>Staff Dashboard<br><small style="font-weight:400;color:#64748b">Manage requests &amp; assign workers</small></span></a>
+      <a href="admin.html" id="adminSvcCard" style="display:none">🛡️ <span>Admin Panel<br><small style="font-weight:400;color:#64748b">Users, analytics &amp; reports</small></span></a>
+    </div>
+  </section>
+
+  <div class="hm-band">
+    <div><h3>Seeing a leak or no water right now?</h3><p>Don’t wait. The sooner we know, the sooner it’s fixed.</p></div>
+    <a href="report.html">Report it now →</a>
+  </div>
+</div>
+
+<footer><p>&copy; 2026 <strong>AquaServe</strong> | Smart Water District Management System</p></footer>
+<script src="script.js"></script>
+<script>
+(function(){
+  var u = null;
+  try { u = JSON.parse(localStorage.getItem('aquaUser') || 'null'); } catch (e) {}
+  var isStaff = u && (u.role === 'staff' || u.role === 'admin');
+  if (isStaff) {
+    document.getElementById('staffRow').style.display = 'grid';
+    document.getElementById('dashSvcCard').style.display = 'flex';
+  }
+  if (u && u.role === 'admin') document.getElementById('adminSvcCard').style.display = 'flex';
+  if (!isStaff) document.getElementById('staffTools').style.display = 'none';
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function myUid() {
+      return request.auth.uid;
+    }
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(myUid())).data.role;
+    }
+    function isStaff() {
+      return isSignedIn() && (myRole() == 'staff' || myRole() == 'admin');
+    }
+    function isAdmin() {
+      return isSignedIn() && myRole() == 'admin';
+    }
+
+    // ── USERS ────────────────────────────────────────────────────
+    // A user can read/update their own profile. Staff/admin can read
+    // any profile (needed to look up requester names, etc). Only
+    // admin can change someone else's role.
+    match /users/{userId} {
+      allow read: if isSignedIn() && (myUid() == userId || isStaff());
+      allow create: if isSignedIn() && myUid() == userId
+                    && request.resource.data.role == 'customer'; // self-signup is always 'customer'
+      allow update: if isSignedIn() && (
+                      (myUid() == userId && request.resource.data.role == resource.data.role) ||
+                      isAdmin()
+                    );
+      allow delete: if isAdmin();
+    }
+
+    // ── SERVICE REQUESTS (water issue reports) ──────────────────
+    // Customers can create their own and read their own; staff/admin
+    // can read and update all (assign worker, change status).
+    match /reports/{reportId} {
+      allow create: if isSignedIn() && request.resource.data.uid == myUid();
+      allow read:   if isSignedIn() && (resource.data.uid == myUid() || isStaff());
+      allow update: if isStaff() ||
+                      (isSignedIn() && resource.data.uid == myUid()
+                       && request.resource.data.status == resource.data.status); // customers can't change status
+      allow delete: if isAdmin();
+    }
+
+    // ── BILLS ────────────────────────────────────────────────────
+    // Customers read only their own bills (matched by uid). Only
+    // staff/admin can create or edit bills.
+    match /bills/{billId} {
+      allow read:   if isSignedIn() && (resource.data.uid == myUid() || isStaff());
+      allow create, update, delete: if isStaff();
+    }
+
+    // ── PAYMENTS ─────────────────────────────────────────────────
+    // Written by the client only to log a completed/attempted
+    // payment against their own account; staff/admin can read all.
+    match /payments/{payId} {
+      allow create: if isSignedIn() && request.resource.data.uid == myUid();
+      allow read:   if isSignedIn() && (resource.data.uid == myUid() || isStaff());
+      allow update, delete: if isStaff();
+    }
+
+    // ── FEEDBACK / RATINGS ───────────────────────────────────────
+    match /feedback/{fbId} {
+      allow create: if isSignedIn() && request.resource.data.uid == myUid();
+      allow read:   if isSignedIn() && (resource.data.uid == myUid() || isStaff());
+      allow update, delete: if isAdmin();
+    }
+
+    // ── ANNOUNCEMENTS (admin-managed, public read) ──────────────
+    match /announcements/{annId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
