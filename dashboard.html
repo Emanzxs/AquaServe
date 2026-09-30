@@ -18,6 +18,12 @@
     .tools{display:flex;gap:.8rem;flex-wrap:wrap;align-items:end;margin-bottom:1rem}
     .tools .form-group{margin:0;flex:1;min-width:180px}
     .row-btns{display:flex;gap:.4rem;flex-wrap:wrap}
+
+    .split-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:1.25rem;margin-bottom:1.5rem}
+    @media (max-width:900px){.split-grid{grid-template-columns:1fr}}
+    .chart-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:1.25rem}
+    .chart-card h4{margin:0 0 1rem;font-size:1rem;color:#0f172a;font-weight:700}
+    .chart-wrap{position:relative;height:220px}
   </style>
 </head>
 <body>
@@ -48,11 +54,17 @@
 
   <!-- ══════ SERVICE REQUESTS ══════ -->
   <div id="tab-reports">
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">Total Requests</div><div class="stat-number" id="statTotal">0</div></div>
-      <div class="stat-card gold"><div class="stat-label">Pending</div><div class="stat-number" id="statPending">0</div></div>
-      <div class="stat-card"><div class="stat-label">Ongoing</div><div class="stat-number" id="statOngoing">0</div></div>
-      <div class="stat-card green"><div class="stat-label">Completed</div><div class="stat-number" id="statCompleted">0</div></div>
+    <div class="split-grid">
+      <div class="stats-grid" style="margin-bottom:0">
+        <div class="stat-card"><div class="stat-label">Total Requests</div><div class="stat-number" id="statTotal">0</div></div>
+        <div class="stat-card gold"><div class="stat-label">Pending</div><div class="stat-number" id="statPending">0</div></div>
+        <div class="stat-card"><div class="stat-label">Ongoing</div><div class="stat-number" id="statOngoing">0</div></div>
+        <div class="stat-card green"><div class="stat-label">Completed</div><div class="stat-number" id="statCompleted">0</div></div>
+      </div>
+      <div class="chart-card">
+        <h4>Requests by status</h4>
+        <div class="chart-wrap"><canvas id="reqStatusChart"></canvas></div>
+      </div>
     </div>
 
     <div class="report-filter-bar">
@@ -73,10 +85,16 @@
 
   <!-- ══════ BILLING ══════ -->
   <div id="tab-billing" style="display:none">
-    <div class="bill-stats">
-      <div class="stat-card gold"><div class="stat-label">Outstanding</div><div class="stat-number" id="bOutstanding" style="font-size:1.5rem">₱0.00</div></div>
-      <div class="stat-card green"><div class="stat-label">Collected</div><div class="stat-number" id="bCollected" style="font-size:1.5rem">₱0.00</div></div>
-      <div class="stat-card"><div class="stat-label">Bills</div><div class="stat-number" id="bCount">0</div></div>
+    <div class="split-grid">
+      <div class="bill-stats" style="margin-bottom:0">
+        <div class="stat-card gold"><div class="stat-label">Outstanding</div><div class="stat-number" id="bOutstanding" style="font-size:1.5rem">₱0.00</div></div>
+        <div class="stat-card green"><div class="stat-label">Collected</div><div class="stat-number" id="bCollected" style="font-size:1.5rem">₱0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Bills</div><div class="stat-number" id="bCount">0</div></div>
+      </div>
+      <div class="chart-card">
+        <h4>Outstanding vs collected</h4>
+        <div class="chart-wrap"><canvas id="billChart"></canvas></div>
+      </div>
     </div>
 
     <div class="form-card" style="max-width:100%">
@@ -130,9 +148,7 @@
 
 <footer><p>&copy; 2026 <strong>AquaServe</strong> | Smart Water District Management System</p></footer>
 <script src="script.js"></script>
-<script>
-try { if (JSON.parse(localStorage.getItem('aquaUser')).role === 'admin') document.getElementById('adminLink').style.display = ''; } catch (e) {}
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script type="module">
 import { auth, db, onAuthStateChanged, collection, getDocs, doc, updateDoc, setDoc, addDoc, onSnapshot, serverTimestamp } from './firebase-config.js';
 
@@ -140,6 +156,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const peso = n => '₱' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
 let allReports = [], bills = [], customers = [], _manageId = null, firstLoad = true, started = false;
+let reqStatusChartInstance = null, billChartInstance = null;
 
 onAuthStateChanged(auth, (u) => {
   let local = null; try { local = JSON.parse(localStorage.getItem('aquaUser') || 'null'); } catch (e) {}
@@ -206,6 +223,14 @@ function updateStats() {
   $('statOngoing').textContent = n('Ongoing');
   $('statCompleted').textContent = n('Completed');
   $('cntReports').textContent = n('Pending');
+
+  const data = [n('Pending'), n('Ongoing'), n('Completed')];
+  if (reqStatusChartInstance) reqStatusChartInstance.destroy();
+  reqStatusChartInstance = new Chart($('reqStatusChart'), {
+    type: 'doughnut',
+    data: { labels: ['Pending', 'Ongoing', 'Completed'], datasets: [{ data, backgroundColor: ['#caa051', '#0a4f7a', '#16a34a'], borderWidth: 0 }] },
+    options: { cutout: '60%' },
+  });
 }
 
 function renderTable() {
@@ -251,10 +276,18 @@ function renderBills() {
   const q = $('billSearch').value.trim().toLowerCase(), sf = $('billStatus').value;
   const paidSum = bills.filter(b => b.status === 'Paid').reduce((s, b) => s + Number(b.amount || 0), 0);
   const unpaid = bills.filter(b => b.status !== 'Paid');
-  $('bOutstanding').textContent = peso(unpaid.reduce((s, b) => s + Number(b.amount || 0), 0));
+  const outstandingSum = unpaid.reduce((s, b) => s + Number(b.amount || 0), 0);
+  $('bOutstanding').textContent = peso(outstandingSum);
   $('bCollected').textContent = peso(paidSum);
   $('bCount').textContent = bills.length;
   $('cntUnpaid').textContent = unpaid.length;
+
+  if (billChartInstance) billChartInstance.destroy();
+  billChartInstance = new Chart($('billChart'), {
+    type: 'doughnut',
+    data: { labels: ['Outstanding', 'Collected'], datasets: [{ data: [outstandingSum, paidSum], backgroundColor: ['#caa051', '#16a34a'], borderWidth: 0 }] },
+    options: { cutout: '60%' },
+  });
 
   const rows = bills.filter(b => (!sf || (sf === 'Paid' ? b.status === 'Paid' : b.status !== 'Paid')) && (!q || (b.customerName || '').toLowerCase().includes(q)));
   $('billsBody').innerHTML = rows.map(b => {
