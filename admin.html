@@ -52,6 +52,7 @@
     .report-summary .mini .l{font-size:.78rem;color:#64748b;margin-top:.15rem}
 
     .empty-note{color:#94a3b8;font-size:.85rem;text-align:center;padding:2rem}
+    .row-btns{display:flex;gap:.4rem;flex-wrap:wrap}
   </style>
 </head>
 <body>
@@ -87,6 +88,7 @@
   <div class="tabbar">
     <button id="tabBtn-users" class="on" onclick="switchTab('users')">👥 Manage Users<span class="cnt" id="cntUsers">0</span></button>
     <button id="tabBtn-issues" onclick="switchTab('issues')">📈 Issue Breakdown<span class="cnt" id="cntIssues">0</span></button>
+    <button id="tabBtn-billing" onclick="switchTab('billing')">💰 Billing<span class="cnt" id="cntBills">0</span></button>
     <button id="tabBtn-reports" onclick="switchTab('reports')">📄 Generate Reports</button>
   </div>
 
@@ -138,6 +140,27 @@
     </div>
   </div>
 
+  <div id="tab-billing" style="display:none">
+    <div class="chart-card" style="margin-bottom:1.25rem">
+      <h4>Profit — collected revenue by month</h4>
+      <p style="margin:-.5rem 0 1rem;font-size:.8rem;color:#94a3b8">Based on payments recorded as received; the system doesn't track operating costs, so this reflects revenue collected, not net profit after expenses.</p>
+      <div class="chart-wrap tall"><canvas id="profitChart"></canvas></div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-head" style="flex-direction:column;align-items:stretch;gap:.75rem">
+        <h3>All Bills</h3>
+        <div class="search-row">
+          <input id="adminBillSearch" placeholder="Search customer…">
+          <select id="adminBillStatus"><option value="">All</option><option value="Pending">Unpaid</option><option value="Paid">Paid</option></select>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Customer</th><th>Period</th><th>Usage</th><th>Amount</th><th>Due</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="adminBillsBody"><tr><td colspan="7" style="text-align:center;color:var(--gray-500);padding:2rem">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
   <div id="tab-reports" style="display:none">
     <div class="form-card">
       <h3 class="form-title" style="font-size:1.15rem">Generate a Report</h3>
@@ -183,7 +206,7 @@
 <script src="script.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script type="module">
-import { auth, db, onAuthStateChanged, collection, getDocs, doc, updateDoc } from './firebase-config.js';
+import { auth, db, onAuthStateChanged, collection, getDocs, doc, updateDoc, setDoc, serverTimestamp } from './firebase-config.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -196,7 +219,7 @@ const initialsOf = (name, email) => {
 
 let allUsers = [], allReports = [], allFeedback = [], bills = [];
 let _roleUid = null;
-let roleChartInstance = null, issueBarChartInstance = null, priorityChartInstance = null, reportChartInstance = null;
+let roleChartInstance = null, issueBarChartInstance = null, priorityChartInstance = null, reportChartInstance = null, profitChartInstance = null;
 
 onAuthStateChanged(auth, async (u) => {
   const localUser = JSON.parse(localStorage.getItem('aquaUser') || 'null');
@@ -212,6 +235,8 @@ onAuthStateChanged(auth, async (u) => {
   });
   $('userSearch').addEventListener('input', () => renderUsers());
   $('userRoleFilter').addEventListener('change', () => renderUsers());
+  $('adminBillSearch').addEventListener('input', () => renderBillingTab());
+  $('adminBillStatus').addEventListener('change', () => renderBillingTab());
   await loadAll();
 });
 
@@ -238,7 +263,65 @@ async function loadAll() {
 
   renderUsers();
   renderIssueBreakdown();
+  renderBillingTab();
 }
+
+/* ───── billing (admin) ───── */
+function renderBillingTab() {
+  $('cntBills').textContent = bills.length;
+
+  const now = new Date();
+  const months = [];
+  for (let i = 11; i >= 0; i--) months.push(new Date(now.getFullYear(), now.getMonth() - i, 1));
+  const labels = months.map(d => d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
+  const totals = months.map(d => {
+    const start = d.getTime(), end = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+    return bills.filter(b => b.status === 'Paid').reduce((s, b) => {
+      const t = b.paidAt?.toDate ? b.paidAt.toDate().getTime() : 0;
+      return (t >= start && t < end) ? s + Number(b.amount || 0) : s;
+    }, 0);
+  });
+  if (profitChartInstance) profitChartInstance.destroy();
+  profitChartInstance = new Chart($('profitChart'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Collected', data: totals, borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,.12)', fill: true, tension: .3 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => peso(v) } } } },
+  });
+
+  const q = $('adminBillSearch').value.trim().toLowerCase(), sf = $('adminBillStatus').value;
+  const rows = bills.filter(b => (!sf || (sf === 'Paid' ? b.status === 'Paid' : b.status !== 'Paid')) && (!q || (b.customerName || '').toLowerCase().includes(q)));
+  $('adminBillsBody').innerHTML = rows.map(b => {
+    const paid = b.status === 'Paid';
+    return `<tr>
+      <td>${esc(b.customerName || b.uid)}</td><td>${esc(b.period)}</td><td>${esc(b.consumption ?? '—')} m³</td>
+      <td>${peso(b.amount)}</td><td>${esc(b.dueDate)}</td>
+      <td><span class="badge ${paid ? 'paid' : 'pending'}">${paid ? 'Paid' : 'Unpaid'}</span></td>
+      <td>${paid ? `<span style="font-size:.78rem;color:var(--gray-500)">${esc((b.paymentMethod || '').toString().toUpperCase())}</span>`
+        : `<div class="row-btns"><button class="small-btn" onclick="markCashAdmin('${esc(b.id)}')">Mark Paid (cash)</button>
+           <button class="small-btn" style="color:#dc2626" onclick="deleteBillAdmin('${esc(b.id)}')">Delete</button></div>`}</td></tr>`;
+  }).join('') || `<tr><td colspan="7" class="empty-note">No bills found.</td></tr>`;
+}
+
+window.markCashAdmin = async (id) => {
+  if (!confirm('Confirm cash payment received for this bill?')) return;
+  try {
+    const b = bills.find(x => x.id === id);
+    await updateDoc(doc(db, 'bills', id), { status: 'Paid', paidAt: serverTimestamp(), paymentMethod: 'Cash (counter)', paymentRef: 'CASH-' + Date.now() });
+    await setDoc(doc(db, 'payments', 'cash-' + id), { uid: b.uid, billId: id, amount: b.amount, method: 'cash', status: 'Verified', recordedBy: auth.currentUser.uid, createdAt: serverTimestamp() });
+    showToast('Marked as paid.', 'success');
+    await loadAll();
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
+};
+
+window.deleteBillAdmin = async (id) => {
+  if (!confirm('Delete this unpaid bill? This cannot be undone.')) return;
+  try {
+    const { deleteDoc } = await import('./firebase-config.js');
+    await deleteDoc(doc(db, 'bills', id));
+    showToast('Bill deleted.', 'success');
+    await loadAll();
+  } catch (e) { showToast('Could not delete (deleteDoc may not be exported in firebase-config.js): ' + e.message, 'error'); }
+};
 
 /* ───── users ───── */
 function renderUsers() {
@@ -333,7 +416,7 @@ function renderIssueBreakdown() {
 
 /* ───── tabs ───── */
 window.switchTab = (t) => {
-  ['users', 'issues', 'reports'].forEach(x => {
+  ['users', 'issues', 'billing', 'reports'].forEach(x => {
     $('tab-' + x).style.display = x === t ? 'block' : 'none';
     $('tabBtn-' + x).classList.toggle('on', x === t);
   });
