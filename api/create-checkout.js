@@ -61,7 +61,7 @@ module.exports = async (req, res) => {
             billing: { name: bill.customerName || decoded.email, email: decoded.email },
             line_items: [{
               name: TRIAL_MODE
-                ? `Water bill (${bill.period || billId}) — TRIAL ₱1 charge, actual due ₱${(actualAmountCentavos / 100).toFixed(2)}`
+                ? `Water bill (${bill.period || billId}) — Actual Bill ₱${(actualAmountCentavos / 100).toFixed(2)}`
                 : `Water bill (${bill.period || billId})`,
               amount: chargeAmountCentavos,
               currency: 'PHP',
