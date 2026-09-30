@@ -3,8 +3,56 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel – AquaServe</title>
+  <title>Staff Dashboard – AquaServe</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .tabbar{display:flex;gap:.6rem;margin:0 0 1.5rem;flex-wrap:wrap}
+    .tabbar button{border:1.5px solid #cbd5e1;background:#fff;border-radius:12px;padding:.7rem 1.3rem;font:inherit;font-weight:700;color:#475569;cursor:pointer;transition:.15s}
+    .tabbar button:hover{border-color:#0a4f7a}
+    .tabbar button.on{background:#0a4f7a;border-color:#0a4f7a;color:#fff}
+    .tabbar .cnt{display:inline-block;min-width:22px;padding:0 .4rem;margin-left:.4rem;border-radius:99px;background:rgba(0,0,0,.12);font-size:.75rem}
+    .live{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;color:#16a34a;font-weight:700}
+    .live::before{content:"";width:8px;height:8px;border-radius:50%;background:#16a34a;animation:lv 1.4s infinite}
+    @keyframes lv{50%{opacity:.25}}
+
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1rem;margin-bottom:1.75rem}
+    .kpi-card{background:#fff;border:1px solid #e2e8f0;border-left:4px solid #0a4f7a;border-radius:12px;padding:1.1rem 1.25rem;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+    .kpi-card.gold{border-left-color:#caa051}
+    .kpi-card.green{border-left-color:#16a34a}
+    .kpi-label{font-size:.8rem;color:#64748b;margin-bottom:.35rem}
+    .kpi-value{font-size:1.55rem;font-weight:800;color:#0f172a;line-height:1.15}
+
+    .split-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:1.25rem}
+    @media (max-width:900px){.split-grid{grid-template-columns:1fr}}
+
+    .chart-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:1.25rem}
+    .chart-card h4{margin:0 0 1rem;font-size:1rem;color:#0f172a;font-weight:700}
+    .chart-wrap{position:relative;height:220px}
+    .chart-wrap.tall{height:290px}
+
+    .legend-list{list-style:none;margin:1rem 0 0;padding:0;display:flex;flex-direction:column;gap:.55rem;font-size:.85rem}
+    .legend-list li{display:flex;align-items:center;gap:.55rem;color:#334155}
+    .legend-dot{width:10px;height:10px;border-radius:50%;flex:none}
+
+    .search-row{display:flex;gap:.7rem;flex-wrap:wrap}
+    .search-row input,.search-row select{border:1.5px solid #cbd5e1;border-radius:10px;padding:.55rem .8rem;font:inherit;background:#fff}
+    .search-row input{flex:1;min-width:180px}
+
+    .user-cell{display:flex;align-items:center;gap:.65rem}
+    .avatar{width:34px;height:34px;border-radius:50%;background:#0a4f7a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;flex:none}
+
+    .role-pill{display:inline-block;padding:.25rem .65rem;border-radius:99px;font-size:.75rem;font-weight:700}
+    .role-pill.customer{background:#e2e8f0;color:#334155}
+    .role-pill.staff{background:#dbeafe;color:#1d4ed8}
+    .role-pill.admin{background:#fef3c7;color:#92400e}
+
+    .report-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.85rem;margin-bottom:1.25rem}
+    .report-summary .mini{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:.8rem 1rem}
+    .report-summary .mini .n{font-size:1.3rem;font-weight:800;color:#0f172a}
+    .report-summary .mini .l{font-size:.78rem;color:#64748b;margin-top:.15rem}
+
+    .empty-note{color:#94a3b8;font-size:.85rem;text-align:center;padding:2rem}
+  </style>
 </head>
 <body>
 <header>
@@ -25,36 +73,66 @@
 
 <div class="page-wrap" id="pageContent" style="display:none">
   <h2 class="section-title">🛡️ Admin Panel</h2>
-  <p class="section-sub">System-wide analytics, user management, and reporting.</p>
+  <p class="section-sub">System-wide analytics, user management, and reporting. <span class="live">Live</span></p>
 
-  <div class="stats-grid">
-    <div class="stat-card"><div class="stat-label">Total Requests</div><div class="stat-number" id="aTotal">0</div></div>
-    <div class="stat-card green"><div class="stat-label">Resolved</div><div class="stat-number" id="aResolved">0</div></div>
-    <div class="stat-card gold"><div class="stat-label">Avg. Rating</div><div class="stat-number" id="aRating">—</div></div>
-    <div class="stat-card"><div class="stat-label">Registered Users</div><div class="stat-number" id="aUsers">0</div></div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-label">Total requests</div><div class="kpi-value" id="aTotal">0</div></div>
+    <div class="kpi-card green"><div class="kpi-label">Resolved</div><div class="kpi-value" id="aResolved">0</div></div>
+    <div class="kpi-card gold"><div class="kpi-label">Avg. rating</div><div class="kpi-value" id="aRating">—</div></div>
+    <div class="kpi-card"><div class="kpi-label">Registered users</div><div class="kpi-value" id="aUsers">0</div></div>
+    <div class="kpi-card gold"><div class="kpi-label">Outstanding</div><div class="kpi-value" id="aOutstanding">₱0.00</div></div>
+    <div class="kpi-card green"><div class="kpi-label">Collected</div><div class="kpi-value" id="aCollected">₱0.00</div></div>
   </div>
 
-  <div class="action-strip">
-    <div class="action-btn active-tab" onclick="switchTab('users', this)"><span class="ab-icon">👥</span>Manage Users</div>
-    <div class="action-btn" onclick="switchTab('issues', this)"><span class="ab-icon">📈</span>Issue Breakdown</div>
-    <div class="action-btn" onclick="switchTab('reports', this)"><span class="ab-icon">📄</span>Generate Reports</div>
+  <div class="tabbar">
+    <button id="tabBtn-users" class="on" onclick="switchTab('users')">👥 Manage Users<span class="cnt" id="cntUsers">0</span></button>
+    <button id="tabBtn-issues" onclick="switchTab('issues')">📈 Issue Breakdown<span class="cnt" id="cntIssues">0</span></button>
+    <button id="tabBtn-reports" onclick="switchTab('reports')">📄 Generate Reports</button>
   </div>
 
   <div id="tab-users">
-    <div class="table-wrap">
-      <div class="table-head"><h3>All Users</h3></div>
-      <table>
-        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
-        <tbody id="usersTableBody"><tr><td colspan="4" style="text-align:center;color:var(--gray-500);padding:2rem">Loading…</td></tr></tbody>
-      </table>
+    <div class="split-grid">
+      <div class="table-wrap" style="margin:0">
+        <div class="table-head" style="flex-direction:column;align-items:stretch;gap:.75rem">
+          <h3>All Users</h3>
+          <div class="search-row">
+            <input id="userSearch" placeholder="Search name or email…">
+            <select id="userRoleFilter">
+              <option value="">All roles</option>
+              <option value="customer">Customer</option>
+              <option value="staff">Staff</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>User</th><th>Role</th><th>Action</th></tr></thead>
+          <tbody id="usersTableBody"><tr><td colspan="3" style="text-align:center;color:var(--gray-500);padding:2rem">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="chart-card">
+        <h4>Users by role</h4>
+        <div class="chart-wrap"><canvas id="roleChart"></canvas></div>
+        <ul class="legend-list" id="roleLegend"></ul>
+      </div>
     </div>
   </div>
 
   <div id="tab-issues" style="display:none">
-    <div class="table-wrap">
+    <div class="split-grid">
+      <div class="chart-card">
+        <h4>Requests by issue type</h4>
+        <div class="chart-wrap tall"><canvas id="issueBarChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h4>Requests by priority</h4>
+        <div class="chart-wrap tall"><canvas id="priorityChart"></canvas></div>
+      </div>
+    </div>
+    <div class="table-wrap" style="margin-top:1.25rem">
       <div class="table-head"><h3>Requests by Issue Type</h3></div>
       <table>
-        <thead><tr><th>Issue Type</th><th>Count</th><th>Avg. Priority</th></tr></thead>
+        <thead><tr><th>Issue Type</th><th>Count</th><th>Most common priority</th></tr></thead>
         <tbody id="issueTableBody"></tbody>
       </table>
     </div>
@@ -103,11 +181,22 @@
 
 <footer><p>&copy; 2026 <strong>AquaServe</strong> | Smart Water District Management System</p></footer>
 <script src="script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script type="module">
-import { auth, db, onAuthStateChanged, collection, getDocs, doc, updateDoc, query } from './firebase-config.js';
+import { auth, db, onAuthStateChanged, collection, getDocs, doc, updateDoc } from './firebase-config.js';
 
-let allUsers = [], allReports = [], allFeedback = [];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const peso = n => '₱' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+const initialsOf = (name, email) => {
+  const s = (name || email || '?').trim();
+  const parts = s.split(/\s+/).filter(Boolean);
+  return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : s.slice(0, 2).toUpperCase();
+};
+
+let allUsers = [], allReports = [], allFeedback = [], bills = [];
 let _roleUid = null;
+let roleChartInstance = null, issueBarChartInstance = null, priorityChartInstance = null, reportChartInstance = null;
 
 onAuthStateChanged(auth, async (u) => {
   const localUser = JSON.parse(localStorage.getItem('aquaUser') || 'null');
@@ -115,43 +204,97 @@ onAuthStateChanged(auth, async (u) => {
     document.body.innerHTML = `<div class="page-wrap"><div class="access-denied"><h2>🚫 Access Denied</h2><p>Admin login required.</p><a href="login.html" class="btn btn-blue">Go to Login</a></div></div>`;
     return;
   }
-  document.getElementById('pageContent').style.display = 'block';
+  $('pageContent').style.display = 'block';
+  $('usersTableBody').addEventListener('click', (e) => {
+    const btn = e.target.closest('.role-btn'); if (!btn) return;
+    const tr = btn.closest('tr');
+    openRoleModal(tr.dataset.uid, tr.dataset.name, tr.dataset.role);
+  });
+  $('userSearch').addEventListener('input', () => renderUsers());
+  $('userRoleFilter').addEventListener('change', () => renderUsers());
   await loadAll();
 });
 
 async function loadAll() {
-  const [usersSnap, reportsSnap, fbSnap] = await Promise.all([
+  const [usersSnap, reportsSnap, fbSnap, billsSnap] = await Promise.all([
     getDocs(collection(db, 'users')),
     getDocs(collection(db, 'reports')),
     getDocs(collection(db, 'feedback')),
+    getDocs(collection(db, 'bills')),
   ]);
   allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   allReports = reportsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   allFeedback = fbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  bills = billsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-  document.getElementById('aTotal').textContent = allReports.length;
-  document.getElementById('aResolved').textContent = allReports.filter(r => r.status === 'Completed').length;
-  document.getElementById('aUsers').textContent = allUsers.length;
-  const avgRating = allFeedback.length
+  $('aTotal').textContent = allReports.length;
+  $('aResolved').textContent = allReports.filter(r => r.status === 'Completed').length;
+  $('aUsers').textContent = allUsers.length;
+  $('aRating').textContent = allFeedback.length
     ? (allFeedback.reduce((s, f) => s + (f.rating || 0), 0) / allFeedback.length).toFixed(1)
     : '—';
-  document.getElementById('aRating').textContent = avgRating;
+  $('aOutstanding').textContent = peso(bills.filter(b => b.status !== 'Paid').reduce((s, b) => s + Number(b.amount || 0), 0));
+  $('aCollected').textContent = peso(bills.filter(b => b.status === 'Paid').reduce((s, b) => s + Number(b.amount || 0), 0));
 
   renderUsers();
   renderIssueBreakdown();
 }
 
+/* ───── users ───── */
 function renderUsers() {
-  document.getElementById('usersTableBody').innerHTML = allUsers.map(u => `
-    <tr>
-      <td>${u.name || '—'}</td>
-      <td>${u.email || '—'}</td>
-      <td><span class="badge approved">${u.role || 'customer'}</span></td>
-      <td><button class="small-btn" onclick="openRoleModal('${u.uid || u.id}','${(u.name || u.email || '').replace(/'/g, "\\'")}','${u.role || 'customer'}')">Change Role</button></td>
-    </tr>
-  `).join('');
+  const q = $('userSearch').value.trim().toLowerCase();
+  const rf = $('userRoleFilter').value;
+  const rows = allUsers.filter(u => {
+    const matchesQ = !q || (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+    const matchesRole = !rf || (u.role || 'customer') === rf;
+    return matchesQ && matchesRole;
+  });
+  $('cntUsers').textContent = allUsers.length;
+  $('usersTableBody').innerHTML = rows.map(u => {
+    const role = u.role || 'customer';
+    return `<tr data-uid="${esc(u.uid || u.id)}" data-name="${esc(u.name || u.email || '')}" data-role="${esc(role)}">
+      <td class="user-cell">
+        <div class="avatar">${esc(initialsOf(u.name, u.email))}</div>
+        <div><div style="font-weight:600">${esc(u.name || '—')}</div><div style="font-size:.78rem;color:var(--gray-500)">${esc(u.email || '—')}</div></div>
+      </td>
+      <td><span class="role-pill ${role}">${esc(role)}</span></td>
+      <td><button class="small-btn role-btn">Change Role</button></td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="3" class="empty-note">No users match your search.</td></tr>`;
+
+  const counts = { customer: 0, staff: 0, admin: 0 };
+  allUsers.forEach(u => { const r = u.role || 'customer'; counts[r] = (counts[r] || 0) + 1; });
+  const labels = ['Customer', 'Staff', 'Admin'], data = [counts.customer, counts.staff, counts.admin];
+  const colors = ['#94a3b8', '#2563eb', '#caa051'];
+  if (roleChartInstance) roleChartInstance.destroy();
+  roleChartInstance = new Chart($('roleChart'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+    options: { plugins: { legend: { display: false } }, cutout: '65%' },
+  });
+  $('roleLegend').innerHTML = labels.map((l, i) => `<li><span class="legend-dot" style="background:${colors[i]}"></span>${l} — ${data[i]}</li>`).join('');
 }
 
+window.openRoleModal = (uid, name, currentRole) => {
+  _roleUid = uid;
+  $('roleModalName').textContent = name;
+  $('roleSelect').value = currentRole;
+  $('roleModal').classList.remove('hidden');
+};
+window.closeRoleModal = () => $('roleModal').classList.add('hidden');
+
+window.saveRoleChange = async () => {
+  try {
+    await updateDoc(doc(db, 'users', _roleUid), { role: $('roleSelect').value });
+    showToast('Role updated.', 'success');
+    closeRoleModal();
+    await loadAll();
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+};
+
+/* ───── issue breakdown ───── */
 function renderIssueBreakdown() {
   const counts = {};
   allReports.forEach(r => {
@@ -164,56 +307,116 @@ function renderIssueBreakdown() {
     const mostCommon = data.priorities.sort((a, b) =>
       data.priorities.filter(p => p === b).length - data.priorities.filter(p => p === a).length
     )[0];
-    return `<tr><td>${type}</td><td>${data.count}</td><td>${mostCommon || '—'}</td></tr>`;
+    return `<tr><td>${esc(type)}</td><td>${data.count}</td><td>${esc(mostCommon || '—')}</td></tr>`;
   }).join('');
-  document.getElementById('issueTableBody').innerHTML = rows || `<tr><td colspan="3" style="text-align:center;color:var(--gray-500);padding:2rem">No data yet.</td></tr>`;
+  $('issueTableBody').innerHTML = rows || `<tr><td colspan="3" class="empty-note">No data yet.</td></tr>`;
+  $('cntIssues').textContent = allReports.length;
+
+  const typeLabels = Object.keys(counts);
+  const typeData = typeLabels.map(t => counts[t].count);
+  if (issueBarChartInstance) issueBarChartInstance.destroy();
+  issueBarChartInstance = new Chart($('issueBarChart'), {
+    type: 'bar',
+    data: { labels: typeLabels.length ? typeLabels : ['No data'], datasets: [{ label: 'Requests', data: typeData.length ? typeData : [0], backgroundColor: '#0a4f7a', borderRadius: 6 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+  });
+
+  const pCounts = { High: 0, Medium: 0, Low: 0 };
+  allReports.forEach(r => { if (pCounts[r.priority] !== undefined) pCounts[r.priority]++; });
+  if (priorityChartInstance) priorityChartInstance.destroy();
+  priorityChartInstance = new Chart($('priorityChart'), {
+    type: 'doughnut',
+    data: { labels: ['High', 'Medium', 'Low'], datasets: [{ data: [pCounts.High, pCounts.Medium, pCounts.Low], backgroundColor: ['#dc2626', '#caa051', '#16a34a'], borderWidth: 0 }] },
+    options: { cutout: '60%' },
+  });
 }
 
-window.switchTab = (tab, el) => {
-  ['users', 'issues', 'reports'].forEach(t => {
-    document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+/* ───── tabs ───── */
+window.switchTab = (t) => {
+  ['users', 'issues', 'reports'].forEach(x => {
+    $('tab-' + x).style.display = x === t ? 'block' : 'none';
+    $('tabBtn-' + x).classList.toggle('on', x === t);
   });
-  document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active-tab'));
-  el.classList.add('active-tab');
 };
 
-window.openRoleModal = (uid, name, currentRole) => {
-  _roleUid = uid;
-  document.getElementById('roleModalName').textContent = name;
-  document.getElementById('roleSelect').value = currentRole;
-  document.getElementById('roleModal').classList.remove('hidden');
-};
-window.closeRoleModal = () => document.getElementById('roleModal').classList.add('hidden');
-
-window.saveRoleChange = async () => {
-  try {
-    await updateDoc(doc(db, 'users', _roleUid), { role: document.getElementById('roleSelect').value });
-    showToast('Role updated.', 'success');
-    closeRoleModal();
-    await loadAll();
-  } catch (err) {
-    showToast('Error: ' + err.message, 'error');
+/* ───── reports ───── */
+function buildBuckets(items, days, dateFn, valueFn) {
+  const bucketSize = days <= 30 ? 1 : (days <= 90 ? 7 : 30);
+  const cutoff = Date.now() - days * 86400000;
+  const numBuckets = Math.max(1, Math.ceil(days / bucketSize));
+  const labels = [], counts = new Array(numBuckets).fill(0);
+  for (let i = 0; i < numBuckets; i++) {
+    const d = new Date(cutoff + i * bucketSize * 86400000);
+    labels.push(bucketSize === 1 ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : bucketSize === 7 ? 'Wk of ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
   }
-};
+  items.forEach(it => {
+    const t = dateFn(it); if (!t || t < cutoff) return;
+    let idx = Math.floor((t - cutoff) / (bucketSize * 86400000));
+    idx = Math.min(numBuckets - 1, Math.max(0, idx));
+    counts[idx] += valueFn ? valueFn(it) : 1;
+  });
+  return { labels, counts };
+}
 
 window.generateReport = () => {
-  const type = document.getElementById('reportType').value;
-  const days = Number(document.getElementById('reportRange').value);
+  const type = $('reportType').value;
+  const days = Number($('reportRange').value);
   const cutoff = Date.now() - days * 86400000;
+  const out = $('reportOutput');
 
   if (type === 'requests') {
     const filtered = allReports.filter(r => {
       const t = r.createdAt?.toDate ? r.createdAt.toDate().getTime() : 0;
       return t >= cutoff;
     });
-    document.getElementById('reportOutput').innerHTML = `
-      <div class="form-info">Found <strong>${filtered.length}</strong> requests in the selected range.
-      Pending: ${filtered.filter(r=>r.status==='Pending').length} ·
-      Ongoing: ${filtered.filter(r=>r.status==='Ongoing').length} ·
-      Completed: ${filtered.filter(r=>r.status==='Completed').length}</div>`;
+    out.innerHTML = `
+      <div class="report-summary">
+        <div class="mini"><div class="n">${filtered.length}</div><div class="l">Total requests</div></div>
+        <div class="mini"><div class="n">${filtered.filter(r => r.status === 'Pending').length}</div><div class="l">Pending</div></div>
+        <div class="mini"><div class="n">${filtered.filter(r => r.status === 'Ongoing').length}</div><div class="l">Ongoing</div></div>
+        <div class="mini"><div class="n">${filtered.filter(r => r.status === 'Completed').length}</div><div class="l">Completed</div></div>
+      </div>
+      <div class="chart-card"><h4>Requests over time</h4><div class="chart-wrap tall"><canvas id="reportChart"></canvas></div></div>`;
+    const { labels, counts } = buildBuckets(filtered, days, r => r.createdAt?.toDate ? r.createdAt.toDate().getTime() : 0);
+    if (reportChartInstance) reportChartInstance.destroy();
+    reportChartInstance = new Chart($('reportChart'), {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Requests', data: counts, borderColor: '#0a4f7a', backgroundColor: 'rgba(10,79,122,.12)', fill: true, tension: .3 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+    });
   } else {
-    document.getElementById('reportOutput').innerHTML = `
-      <div class="form-info">Payments reporting requires the <code>payments</code> collection — wire this up once billing data is populated.</div>`;
+    if (!bills.length) {
+      out.innerHTML = `<div class="form-info">No billing data yet — payments reporting will populate once bills are created and paid.</div>`;
+      return;
+    }
+    const paid = bills.filter(b => b.status === 'Paid');
+    const filtered = paid.filter(b => {
+      const t = b.paidAt?.toDate ? b.paidAt.toDate().getTime() : 0;
+      return t >= cutoff;
+    });
+    const total = filtered.reduce((s, b) => s + Number(b.amount || 0), 0);
+    const methodTotals = {};
+    filtered.forEach(b => { const m = b.paymentMethod || 'Unknown'; methodTotals[m] = (methodTotals[m] || 0) + Number(b.amount || 0); });
+    const methodRows = Object.entries(methodTotals).map(([m, v]) => `<li><span class="legend-dot" style="background:#0a4f7a"></span>${esc(m)} — ${peso(v)}</li>`).join('')
+      || `<li class="empty-note">No payments in this range.</li>`;
+    out.innerHTML = `
+      <div class="report-summary">
+        <div class="mini"><div class="n">${peso(total)}</div><div class="l">Collected</div></div>
+        <div class="mini"><div class="n">${filtered.length}</div><div class="l">Payments</div></div>
+      </div>
+      <div class="split-grid">
+        <div class="chart-card"><h4>Collected over time</h4><div class="chart-wrap tall"><canvas id="reportChart"></canvas></div></div>
+        <div class="chart-card"><h4>By payment method</h4><ul class="legend-list">${methodRows}</ul></div>
+      </div>`;
+    const { labels, counts } = buildBuckets(filtered, days, b => b.paidAt?.toDate ? b.paidAt.toDate().getTime() : 0, b => Number(b.amount || 0));
+    if (reportChartInstance) reportChartInstance.destroy();
+    reportChartInstance = new Chart($('reportChart'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Collected', data: counts, backgroundColor: '#16a34a', borderRadius: 6 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+    });
   }
 };
 </script>
