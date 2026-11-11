@@ -54,11 +54,17 @@ service cloud.firestore {
       allow create, update, delete: if isStaff();
     }
 
-    // ── PAYMENTS ─────────────────────────────────────────────────
-    // Written by the client only to log a completed/attempted
-    // payment against their own account; staff/admin can read all.
+        // ── PAYMENTS ─────────────────────────────────────────────────
+    // Staff/admin can log a verified payment against ANY customer's
+    // uid (needed for cash payments recorded at the counter). A
+    // customer may only log their own receipt, and only as
+    // "Pending Review" — a real "Verified" payment is written either
+    // by staff here or by the server (Admin SDK bypasses rules
+    // entirely, e.g. the PayMongo webhook).
     match /payments/{payId} {
-      allow create: if isSignedIn() && request.resource.data.uid == myUid();
+      allow create: if isStaff() ||
+                      (isSignedIn() && request.resource.data.uid == myUid()
+                       && request.resource.data.status == 'Pending Review');
       allow read:   if isSignedIn() && (resource.data.uid == myUid() || isStaff());
       allow update, delete: if isStaff();
     }
