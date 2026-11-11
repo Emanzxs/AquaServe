@@ -55,11 +55,28 @@ module.exports = async (req, res) => {
   const billRef = db.collection('bills').doc(billId);
   const snap = await billRef.get();
   if (snap.exists && snap.data().status !== 'Paid') {
+    const bill = snap.data();
+    const method = payment?.attributes?.source?.type || 'online';
+    const ref = payment?.id || session.id;
+
     await billRef.update({
       status: 'Paid',
       paidAt: admin.firestore.FieldValue.serverTimestamp(),
-      paymentMethod: payment?.attributes?.source?.type || 'online',
-      paymentRef: payment?.id || session.id,
+      paymentMethod: method,
+      paymentRef: ref,
+    });
+
+    // Log it in payments too, same as cash payments do, so staff/admin
+    // see one unified "successful payments" record regardless of method.
+    // Uses the Admin SDK, so it bypasses firestore.rules entirely.
+    await db.collection('payments').doc('online-' + ref).set({
+      uid: bill.uid,
+      billId,
+      amount: Number(bill.amount) || 0,
+      method,
+      status: 'Verified',
+      recordedBy: 'paymongo-webhook',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   }
 
