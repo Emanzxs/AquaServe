@@ -126,18 +126,6 @@
         <tbody id="paymentsBody"><tr><td colspan="6" style="text-align:center;padding:2rem">Loading…</td></tr></tbody>
       </table>
     </div>
-
-    <div class="table-wrap" style="margin-top:2rem">
-      <div class="table-head"><h3>All Bills</h3></div>
-      <div style="padding:0 1.25rem 1rem" class="tools">
-        <div class="form-group"><label>Search customer</label><input id="billSearch" placeholder="Name…"></div>
-        <div class="form-group"><label>Status</label><select id="billStatus"><option value="">All</option><option value="Pending">Unpaid</option><option value="Paid">Paid</option></select></div>
-      </div>
-      <table>
-        <thead><tr><th>Customer</th><th>Period</th><th>Usage</th><th>Amount</th><th>Due</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody id="billsBody"><tr><td colspan="7" style="text-align:center;padding:2rem">Loading…</td></tr></tbody>
-      </table>
-    </div>
   </div>
 </div>
 
@@ -220,8 +208,6 @@ async function start() {
   $('fCustomer').addEventListener('change', fillAccount); fillAccount();
   ['fPrev', 'fCurr', 'fMin', 'fRate'].forEach(id => $(id).addEventListener('input', calc));
   ['filterStatus', 'filterPriority'].forEach(id => $(id).addEventListener('change', renderTable));
-  $('billSearch').addEventListener('input', renderBills);
-  $('billStatus').addEventListener('change', renderBills);
 }
 
 /* ───── tabs ───── */
@@ -291,7 +277,6 @@ window.saveManageChanges = async () => {
 
 /* ───── billing ───── */
 function renderBills() {
-  const q = $('billSearch').value.trim().toLowerCase(), sf = $('billStatus').value;
   const paidSum = bills.filter(b => b.status === 'Paid').reduce((s, b) => s + Number(b.amount || 0), 0);
   const unpaid = bills.filter(b => b.status !== 'Paid');
   const outstandingSum = unpaid.reduce((s, b) => s + Number(b.amount || 0), 0);
@@ -306,18 +291,6 @@ function renderBills() {
     data: { labels: ['Outstanding', 'Collected'], datasets: [{ data: [outstandingSum, paidSum], backgroundColor: ['#caa051', '#16a34a'], borderWidth: 0 }] },
     options: { cutout: '60%' },
   });
-
-  const rows = bills.filter(b => (!sf || (sf === 'Paid' ? b.status === 'Paid' : b.status !== 'Paid')) && (!q || (b.customerName || '').toLowerCase().includes(q)));
-  $('billsBody').innerHTML = rows.map(b => {
-    const paid = b.status === 'Paid';
-    return `<tr>
-      <td>${esc(b.customerName || b.uid)}</td><td>${esc(b.period)}</td><td>${esc(b.consumption ?? '—')} m³</td>
-      <td>${peso(b.amount)}</td><td>${esc(b.dueDate)}</td>
-      <td><span class="badge ${paid ? 'paid' : 'pending'}">${paid ? 'Paid' : 'Unpaid'}</span></td>
-      <td>${paid ? `<span style="font-size:.78rem;color:var(--gray-500)">${esc((b.paymentMethod || '').toString().toUpperCase())}</span>`
-        : `<div class="row-btns"><button class="small-btn" onclick="markCash('${esc(b.id)}')">Mark Paid (cash)</button>
-           <button class="small-btn" style="color:#dc2626" onclick="deleteBill('${esc(b.id)}')">Delete</button></div>`}</td></tr>`;
-  }).join('') || `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-500)">No bills found.</td></tr>`;
 }
 
 function renderPayments() {
@@ -374,7 +347,7 @@ window.createBill = async () => {
     });
     const acct = $('fAccount').value.trim();
     if (acct && !c.accountNumber) {
-      try { await updateDoc(doc(db, 'users', c.id), { accountNumber: acct }); c.accountNumber = acct; }
+            try { await updateDoc(doc(db, 'users', c.id), { accountNumber: acct }); c.accountNumber = acct; }
       catch (e) { console.warn('Could not save account number to customer profile:', e.message); }
     }
     showToast('Bill created and sent to the customer.', 'success');
