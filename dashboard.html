@@ -93,7 +93,7 @@
       </div>
       <div class="chart-card">
         <h4>Outstanding vs collected</h4>
-        <div class="chart-wrap"><canvas id="billChart"></canvas></div>
+        <div class="chart-wrap"><canvas id="billChart"></canvas><p id="billChartEmpty" style="display:none;position:absolute;inset:0;margin:0;align-items:center;justify-content:center;text-align:center;color:#94a3b8;font-size:.9rem">No bills yet — create a bill to see the chart.</p></div>
       </div>
     </div>
 
@@ -216,6 +216,8 @@ window.showTab = (t) => {
     $('tab-' + x).style.display = x === t ? 'block' : 'none';
     $('tabBtn-' + x).classList.toggle('on', x === t);
   });
+  if (billChartInstance) billChartInstance.resize();
+  if (reqStatusChartInstance) reqStatusChartInstance.resize();
   if (location.hash !== (t === 'billing' ? '#billing' : '') && (t === 'billing' || location.hash)) history.replaceState(null, '', t === 'billing' ? '#billing' : location.pathname);
 };
 
@@ -229,8 +231,8 @@ function updateStats() {
   $('cntReports').textContent = n('Pending');
 
   const data = [n('Pending'), n('Ongoing'), n('Completed')];
-  if (reqStatusChartInstance) reqStatusChartInstance.destroy();
-  reqStatusChartInstance = new Chart($('reqStatusChart'), {
+  if (reqStatusChartInstance) { reqStatusChartInstance.destroy(); reqStatusChartInstance = null; }
+  if (window.Chart) reqStatusChartInstance = new Chart($('reqStatusChart'), {
     type: 'doughnut',
     data: { labels: ['Pending', 'Ongoing', 'Completed'], datasets: [{ data, backgroundColor: ['#caa051', '#0a4f7a', '#16a34a'], borderWidth: 0 }] },
     options: { cutout: '60%' },
@@ -285,12 +287,17 @@ function renderBills() {
   $('bCount').textContent = bills.length;
   $('cntUnpaid').textContent = unpaid.length;
 
-  if (billChartInstance) billChartInstance.destroy();
-  billChartInstance = new Chart($('billChart'), {
-    type: 'doughnut',
-    data: { labels: ['Outstanding', 'Collected'], datasets: [{ data: [outstandingSum, paidSum], backgroundColor: ['#caa051', '#16a34a'], borderWidth: 0 }] },
-    options: { cutout: '60%' },
-  });
+  const empty = outstandingSum + paidSum === 0;
+  $('billChartEmpty').style.display = empty ? 'flex' : 'none';
+  $('billChart').style.display = empty ? 'none' : 'block';
+  if (billChartInstance) { billChartInstance.destroy(); billChartInstance = null; }
+  if (!empty && window.Chart) {
+    billChartInstance = new Chart($('billChart'), {
+      type: 'doughnut',
+      data: { labels: ['Outstanding', 'Collected'], datasets: [{ data: [outstandingSum, paidSum], backgroundColor: ['#caa051', '#16a34a'], borderWidth: 0 }] },
+      options: { cutout: '60%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+    });
+  }
 }
 
 function renderPayments() {
@@ -335,7 +342,7 @@ window.createBill = async () => {
   if ($('fPrev').value === '') problems.push('enter the previous reading');
   if ($('fCurr').value === '') problems.push('enter the current reading');
   if ($('fPrev').value !== '' && $('fCurr').value !== '' && curr < prev) problems.push('current reading must not be lower than the previous reading');
-  if (!(amount >= 20)) problems.push('amount must be at least ₱20 (it fills in after both readings are entered)');
+    if (!(amount >= 20)) problems.push('amount must be at least ₱20 (it fills in after both readings are entered)');
   if (problems.length) return showToast('Please ' + problems.join('; ') + '.', 'error');
   const btn = $('createBtn'); btn.disabled = true;
   try {
@@ -347,7 +354,7 @@ window.createBill = async () => {
     });
     const acct = $('fAccount').value.trim();
     if (acct && !c.accountNumber) {
-            try { await updateDoc(doc(db, 'users', c.id), { accountNumber: acct }); c.accountNumber = acct; }
+      try { await updateDoc(doc(db, 'users', c.id), { accountNumber: acct }); c.accountNumber = acct; }
       catch (e) { console.warn('Could not save account number to customer profile:', e.message); }
     }
     showToast('Bill created and sent to the customer.', 'success');
