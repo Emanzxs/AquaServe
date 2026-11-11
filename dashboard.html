@@ -63,7 +63,7 @@
       </div>
       <div class="chart-card">
         <h4>Requests by status</h4>
-        <div class="chart-wrap"><canvas id="reqStatusChart"></canvas></div>
+        <div class="chart-wrap" id="reqStatusChart"></div>
       </div>
     </div>
 
@@ -93,7 +93,7 @@
       </div>
       <div class="chart-card">
         <h4>Outstanding vs collected</h4>
-        <div class="chart-wrap"><canvas id="billChart"></canvas><p id="billChartEmpty" style="display:none;position:absolute;inset:0;margin:0;align-items:center;justify-content:center;text-align:center;color:#94a3b8;font-size:.9rem">No bills yet — create a bill to see the chart.</p></div>
+        <div class="chart-wrap" id="billChart"></div>
       </div>
     </div>
 
@@ -144,7 +144,6 @@
 
 <footer><p>&copy; 2026 <strong>AquaServe</strong> | Smart Water District Management System</p></footer>
 <script src="script.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script type="module">
 import { auth, db, onAuthStateChanged, collection, getDocs, doc, updateDoc, setDoc, addDoc, onSnapshot, serverTimestamp } from './firebase-config.js';
 
@@ -152,7 +151,23 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const peso = n => '₱' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
 let allReports = [], bills = [], payments = [], customers = [], _manageId = null, firstLoad = true, started = false;
-let reqStatusChartInstance = null, billChartInstance = null;
+
+// Dependency-free donut chart (inline SVG) — no CDN, so it always renders
+function donut(el, items, centerText) {
+  const total = items.reduce((t, i) => t + i.value, 0);
+  if (!total) { el.innerHTML = '<p style="display:flex;height:100%;align-items:center;justify-content:center;margin:0;text-align:center;color:#94a3b8;font-size:.9rem">No data yet.</p>'; return; }
+  const r = 70, c = 2 * Math.PI * r; let off = 0;
+  const arcs = items.filter(i => i.value > 0).map(i => {
+    const len = i.value / total * c;
+    const a = `<circle cx="100" cy="100" r="${r}" fill="none" stroke="${i.color}" stroke-width="30" stroke-dasharray="${len} ${c - len}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"/>`;
+    off += len; return a;
+  }).join('');
+  const legend = items.map(i => `<li style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:#334155"><span style="width:10px;height:10px;border-radius:50%;background:${i.color};flex:none"></span>${esc(i.label)}: <strong>${esc(i.text ?? i.value)}</strong> (${Math.round(i.value / total * 100)}%)</li>`).join('');
+  el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;height:100%">
+    <svg viewBox="0 0 200 200" style="width:120px;height:120px;flex:none"><circle cx="100" cy="100" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="30"/>${arcs}
+    <text x="100" y="108" text-anchor="middle" font-size="26" font-weight="800" fill="#0f172a">${esc(centerText ?? '')}</text></svg>
+    <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.3rem">${legend}</ul></div>`;
+}
 
 onAuthStateChanged(auth, (u) => {
   let local = null; try { local = JSON.parse(localStorage.getItem('aquaUser') || 'null'); } catch (e) {}
@@ -216,8 +231,6 @@ window.showTab = (t) => {
     $('tab-' + x).style.display = x === t ? 'block' : 'none';
     $('tabBtn-' + x).classList.toggle('on', x === t);
   });
-  if (billChartInstance) billChartInstance.resize();
-  if (reqStatusChartInstance) reqStatusChartInstance.resize();
   if (location.hash !== (t === 'billing' ? '#billing' : '') && (t === 'billing' || location.hash)) history.replaceState(null, '', t === 'billing' ? '#billing' : location.pathname);
 };
 
@@ -230,13 +243,11 @@ function updateStats() {
   $('statCompleted').textContent = n('Completed');
   $('cntReports').textContent = n('Pending');
 
-  const data = [n('Pending'), n('Ongoing'), n('Completed')];
-  if (reqStatusChartInstance) { reqStatusChartInstance.destroy(); reqStatusChartInstance = null; }
-  if (window.Chart) reqStatusChartInstance = new Chart($('reqStatusChart'), {
-    type: 'doughnut',
-    data: { labels: ['Pending', 'Ongoing', 'Completed'], datasets: [{ data, backgroundColor: ['#caa051', '#0a4f7a', '#16a34a'], borderWidth: 0 }] },
-    options: { cutout: '60%' },
-  });
+  donut($('reqStatusChart'), [
+    { label: 'Pending', value: n('Pending'), color: '#caa051' },
+    { label: 'Ongoing', value: n('Ongoing'), color: '#0a4f7a' },
+    { label: 'Completed', value: n('Completed'), color: '#16a34a' },
+  ], String(allReports.length));
 }
 
 function renderTable() {
@@ -287,17 +298,10 @@ function renderBills() {
   $('bCount').textContent = bills.length;
   $('cntUnpaid').textContent = unpaid.length;
 
-  const empty = outstandingSum + paidSum === 0;
-  $('billChartEmpty').style.display = empty ? 'flex' : 'none';
-  $('billChart').style.display = empty ? 'none' : 'block';
-  if (billChartInstance) { billChartInstance.destroy(); billChartInstance = null; }
-  if (!empty && window.Chart) {
-    billChartInstance = new Chart($('billChart'), {
-      type: 'doughnut',
-      data: { labels: ['Outstanding', 'Collected'], datasets: [{ data: [outstandingSum, paidSum], backgroundColor: ['#caa051', '#16a34a'], borderWidth: 0 }] },
-      options: { cutout: '60%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
-    });
-  }
+  donut($('billChart'), [
+    { label: 'Outstanding', value: outstandingSum, color: '#caa051', text: peso(outstandingSum) },
+    { label: 'Collected', value: paidSum, color: '#16a34a', text: peso(paidSum) },
+  ], bills.length + ' bills');
 }
 
 function renderPayments() {
@@ -336,13 +340,13 @@ window.createBill = async () => {
   const c = customers.find(x => x.id === $('fCustomer').value);
   const amount = +$('fAmount').value, prev = +$('fPrev').value, curr = +$('fCurr').value;
   const problems = [];
-  if (!c) problems.push('choose a customer');
+    if (!c) problems.push('choose a customer');
   if (!$('fPeriod').value.trim()) problems.push('enter the billing period (e.g. September 2026)');
   if (!$('fDue').value) problems.push('pick a due date');
   if ($('fPrev').value === '') problems.push('enter the previous reading');
   if ($('fCurr').value === '') problems.push('enter the current reading');
   if ($('fPrev').value !== '' && $('fCurr').value !== '' && curr < prev) problems.push('current reading must not be lower than the previous reading');
-    if (!(amount >= 20)) problems.push('amount must be at least ₱20 (it fills in after both readings are entered)');
+  if (!(amount >= 20)) problems.push('amount must be at least ₱20 (it fills in after both readings are entered)');
   if (problems.length) return showToast('Please ' + problems.join('; ') + '.', 'error');
   const btn = $('createBtn'); btn.disabled = true;
   try {
