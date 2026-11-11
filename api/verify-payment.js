@@ -46,12 +46,30 @@ module.exports = async (req, res) => {
     const paidPayment = (json.data?.attributes?.payments || []).find(p => p.attributes?.status === 'paid');
 
     if (paidPayment) {
+      const method = paidPayment.attributes?.source?.type || 'online';
+      const ref = paidPayment.id;
+
       await billRef.update({
         status: 'Paid',
         paidAt: admin.firestore.FieldValue.serverTimestamp(),
-        paymentMethod: paidPayment.attributes?.source?.type || 'online',
-        paymentRef: paidPayment.id,
+        paymentMethod: method,
+        paymentRef: ref,
       });
+
+      // Same payments log entry the webhook would have written — written
+      // here too in case this backup path is what catches the payment.
+      // set() with a fixed ref-based id makes this safe even if both the
+      // webhook and this backup path fire for the same payment.
+      await db.collection('payments').doc('online-' + ref).set({
+        uid: bill.uid,
+        billId,
+        amount: Number(bill.amount) || 0,
+        method,
+        status: 'Verified',
+        recordedBy: 'verify-payment',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
       return res.status(200).json({ paid: true });
     }
 
