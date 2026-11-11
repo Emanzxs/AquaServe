@@ -120,6 +120,14 @@
     </div>
 
     <div class="table-wrap" style="margin-top:2rem">
+      <div class="table-head"><h3>✅ Recent Successful Payments</h3></div>
+      <table>
+        <thead><tr><th>When</th><th>Customer</th><th>Bill Period</th><th>Amount</th><th>Method</th><th>Reference</th></tr></thead>
+        <tbody id="paymentsBody"><tr><td colspan="6" style="text-align:center;padding:2rem">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap" style="margin-top:2rem">
       <div class="table-head"><h3>All Bills</h3></div>
       <div style="padding:0 1.25rem 1rem" class="tools">
         <div class="form-group"><label>Search customer</label><input id="billSearch" placeholder="Name…"></div>
@@ -155,7 +163,7 @@ import { auth, db, onAuthStateChanged, collection, getDocs, doc, updateDoc, setD
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const peso = n => '₱' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-let allReports = [], bills = [], customers = [], _manageId = null, firstLoad = true, started = false;
+let allReports = [], bills = [], payments = [], customers = [], _manageId = null, firstLoad = true, started = false;
 let reqStatusChartInstance = null, billChartInstance = null;
 
 onAuthStateChanged(auth, (u) => {
@@ -186,8 +194,18 @@ async function start() {
   onSnapshot(collection(db, 'bills'), (snap) => {
     bills = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.dueDate || '').localeCompare(a.dueDate || ''));
-    renderBills();
+    renderBills(); renderPayments();
   }, (e) => console.error(e));
+
+  // Live payments (cash + online, written when a bill is marked Paid)
+  onSnapshot(collection(db, 'payments'), (snap) => {
+    payments = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    renderPayments();
+  }, (e) => {
+    console.error(e);
+    $('paymentsBody').innerHTML = `<tr><td colspan="6" style="text-align:center;color:#dc2626;padding:2rem">Could not load payments: ${esc(e.message)}</td></tr>`;
+  });
 
   // Customers (for billing) + staff names (for worker suggestions)
   try {
@@ -302,11 +320,28 @@ function renderBills() {
   }).join('') || `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-500)">No bills found.</td></tr>`;
 }
 
+function renderPayments() {
+  if (!payments.length) { $('paymentsBody').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-500)">No payments recorded yet.</td></tr>`; return; }
+  const rows = payments.slice(0, 25).map(p => {
+    const bill = bills.find(b => b.id === p.billId);
+    const when = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+    const customerName = bill?.customerName || p.uid || '—';
+    return `<tr>
+      <td style="white-space:nowrap">${esc(when)}</td>
+      <td>${esc(customerName)}</td>
+      <td>${esc(bill?.period || '—')}</td>
+      <td>${peso(p.amount)}</td>
+      <td><span style="font-size:.78rem;color:var(--gray-500)">${esc((p.method || '').toString().toUpperCase())}</span></td>
+      <td style="font-size:.78rem;color:var(--gray-500)">${esc(p.id)}</td></tr>`;
+  }).join('');
+  $('paymentsBody').innerHTML = rows;
+}
+
 // Use the customer's saved account number, or suggest the next free one (AQ-00001, AQ-00002…)
 function fillAccount() {
   const c = customers.find(x => x.id === $('fCustomer').value);
   if (c?.accountNumber) { $('fAccount').value = c.accountNumber; $('fAccount').title = 'Saved on this customer'; return; }
-  const nums = customers.map(x => parseInt(String(x.accountNumber || '').replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
+    const nums = customers.map(x => parseInt(String(x.accountNumber || '').replace(/\D/g, ''), 10)).filter(n => !isNaN(n));
   $('fAccount').value = 'AQ-' + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(5, '0');
   $('fAccount').title = 'Suggested new account number — it will be saved to the customer when you create the bill';
 }
