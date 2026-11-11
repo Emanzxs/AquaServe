@@ -14,10 +14,10 @@
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-// ── 🔧 PASTE YOUR SUPABASE PROJECT DETAILS HERE ──────────────────
+// ── Wired to project: bmceuxciuxcvjjfvdkxf ───────────────────────
 export const supabase = createClient(
-  'https://YOUR_PROJECT_REF.supabase.co',
-  'YOUR_ANON_PUBLIC_KEY'
+  'https://bmceuxciuxcvjjfvdkxf.supabase.co',
+  'sb_publishable_moTmufq7nS5x729Vj4pRNg_HcUDlVyr'
 );
 // ──────────────────────────────────────────────────────────────────
 
