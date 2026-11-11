@@ -146,6 +146,14 @@
       <p style="margin:-.5rem 0 1rem;font-size:.8rem;color:#94a3b8">Based on payments recorded as received; the system doesn't track operating costs, so this reflects revenue collected, not net profit after expenses.</p>
       <div class="chart-wrap tall"><canvas id="profitChart"></canvas></div>
     </div>
+    <div class="table-wrap" style="margin-bottom:1.25rem">
+      <div class="table-head"><h3>✅ Recent Successful Payments</h3></div>
+      <table>
+        <thead><tr><th>When</th><th>Customer</th><th>Bill Period</th><th>Amount</th><th>Method</th><th>Reference</th></tr></thead>
+        <tbody id="paymentsBody"><tr><td colspan="6" style="text-align:center;color:var(--gray-500);padding:2rem">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
     <div class="table-wrap">
       <div class="table-head" style="flex-direction:column;align-items:stretch;gap:.75rem">
         <h3>All Bills</h3>
@@ -217,7 +225,7 @@ const initialsOf = (name, email) => {
   return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : s.slice(0, 2).toUpperCase();
 };
 
-let allUsers = [], allReports = [], allFeedback = [], bills = [];
+let allUsers = [], allReports = [], allFeedback = [], bills = [], payments = [];
 let _roleUid = null;
 let roleChartInstance = null, issueBarChartInstance = null, priorityChartInstance = null, reportChartInstance = null, profitChartInstance = null;
 
@@ -241,16 +249,19 @@ onAuthStateChanged(auth, async (u) => {
 });
 
 async function loadAll() {
-  const [usersSnap, reportsSnap, fbSnap, billsSnap] = await Promise.all([
+  const [usersSnap, reportsSnap, fbSnap, billsSnap, paymentsSnap] = await Promise.all([
     getDocs(collection(db, 'users')),
     getDocs(collection(db, 'reports')),
     getDocs(collection(db, 'feedback')),
     getDocs(collection(db, 'bills')),
+    getDocs(collection(db, 'payments')),
   ]);
   allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   allReports = reportsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   allFeedback = fbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   bills = billsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  payments = paymentsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
   $('aTotal').textContent = allReports.length;
   $('aResolved').textContent = allReports.filter(r => r.status === 'Completed').length;
@@ -267,8 +278,24 @@ async function loadAll() {
 }
 
 /* ───── billing (admin) ───── */
+function renderPayments() {
+  if (!payments.length) { $('paymentsBody').innerHTML = `<tr><td colspan="6" class="empty-note">No payments recorded yet.</td></tr>`; return; }
+  $('paymentsBody').innerHTML = payments.slice(0, 25).map(p => {
+    const bill = bills.find(b => b.id === p.billId);
+    const when = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+    return `<tr>
+      <td style="white-space:nowrap">${esc(when)}</td>
+      <td>${esc(bill?.customerName || p.uid || '—')}</td>
+      <td>${esc(bill?.period || '—')}</td>
+      <td>${peso(p.amount)}</td>
+      <td><span style="font-size:.78rem;color:var(--gray-500)">${esc((p.method || '').toString().toUpperCase())}</span></td>
+      <td style="font-size:.78rem;color:var(--gray-500)">${esc(p.id)}</td></tr>`;
+  }).join('');
+}
+
 function renderBillingTab() {
   $('cntBills').textContent = bills.length;
+  renderPayments();
 
   const now = new Date();
   const months = [];
